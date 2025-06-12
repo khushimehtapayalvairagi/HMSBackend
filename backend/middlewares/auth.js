@@ -1,13 +1,15 @@
-const { getUser } = require("../auth");
+const { getUser } = require("../utils/auth");
 
 async function restrictToLoggedInUserOnly(req,res,next){
-    const userUid = req.cookies?.uid;
+    const userid = req.headers['authorization'];
 
-    if(!userUid) return res.status(404).json({
+    if(!userid) return res.status(404).json({
         message:"Token not found"
     })
 
-    const user = getUser(userUid);
+    const token = userid.split('Bearer ')[1]; 
+
+    const user = getUser(token);
     
     if(!user) return res.status(404).json({
         message:"User Not found"
