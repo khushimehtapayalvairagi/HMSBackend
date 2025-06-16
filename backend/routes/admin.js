@@ -4,8 +4,9 @@ const {registerHandler,getAllUsersHandler,createDepartmentHandler
     ,getAllRoomCategoriesHandler,createWardHandler,getAllWardsHandler,createLabourRoomHandler,getAllLabourRoomsHandler
     ,createProcedureHandler,getAllProceduresHandler,createManualChargeItemHandler,getAllManualChargeItemsHandler
     ,getAllStaffHandler,getStaffByIdHandler,getAllDoctorsHandler
-    ,getDoctorByIdHandler}  = require("../controllers/admin")
-    
+    ,getDoctorByIdHandler,createReferralPartnerHandler,getAllReferralPartnersHandler,createOperationTheaterHandler
+    ,getAllOperationTheatersHandler}  = require("../controllers/admin")
+
 const router = express.Router();
 
 router.post('/users', registerHandler); 
@@ -28,6 +29,12 @@ router.get('/staff', getAllStaffHandler);
 router.get('/staff/:id', getStaffByIdHandler);
 router.get('/doctors', getAllDoctorsHandler);
 router.get('/doctors/:id', getDoctorByIdHandler);
+router.post('/referral-partners', createReferralPartnerHandler);
+router.get('/referral-partners', getAllReferralPartnersHandler);
+router.post('/operation-theaters', createOperationTheaterHandler);
+router.get('/operation-theaters', getAllOperationTheatersHandler);
+
+
 
 
 module.exports = router;

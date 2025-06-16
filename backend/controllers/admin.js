@@ -10,6 +10,8 @@ const Procedure = require('../models/Procedure');
 const ManualChargeItem = require('../models/ManualChargeItem');
 const Doctor = require('../models/Doctor');
 const Staff = require('../models/Staff');
+const ReferralPartner = require('../models/ReferralPartner');
+const OperationTheater = require('../models/OperationTheater');
 
 const bcrypt = require('bcrypt');
 
@@ -439,7 +441,6 @@ const getStaffByIdHandler = async (req, res) => {
     }
 };
 
-
 const getAllDoctorsHandler = async (req, res) => {
     try {
         const doctors = await Doctor.find().populate('userId', 'name email role').populate('specialty', 'name');
@@ -464,6 +465,82 @@ const getDoctorByIdHandler = async (req, res) => {
     }
 };
 
+const createReferralPartnerHandler = async (req, res) => {
+    try {
+        const { name, contactNumber } = req.body;
+
+        if (!name || !contactNumber) {
+            return res.status(400).json({ message: 'All fields are required.' });
+        }
+
+        const existing = await ReferralPartner.findOne({ name: name.trim() });
+        if (existing) {
+            return res.status(400).json({ message: 'Referral Partner already exists.' });
+        }
+
+        const partner = new ReferralPartner({
+            name: name.trim(),
+            contactNumber: contactNumber.trim()
+        });
+
+        await partner.save();
+
+        res.status(201).json({ message: 'Referral Partner created successfully.', partner });
+    } catch (error) {
+        console.error('Create Referral Partner Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+const getAllReferralPartnersHandler = async (req, res) => {
+    try {
+        const partners = await ReferralPartner.find();
+        res.status(200).json({ partners });
+    } catch (error) {
+        console.error('Fetch Referral Partners Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+const createOperationTheaterHandler = async (req, res) => {
+    try {
+        const { name, status } = req.body;
+
+        if (!name) {
+            return res.status(400).json({ message: 'Theater name is required.' });
+        }
+
+        const existing = await OperationTheater.findOne({ name: name.trim() });
+        if (existing) {
+            return res.status(400).json({ message: 'Operation Theater already exists.' });
+        }
+
+        const theater = new OperationTheater({
+            name: name.trim(),
+            status: status || 'Available'
+        });
+
+        await theater.save();
+
+        res.status(201).json({ message: 'Operation Theater created successfully.', theater });
+    } catch (error) {
+        console.error('Create Operation Theater Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+const getAllOperationTheatersHandler = async (req, res) => {
+    try {
+        const theaters = await OperationTheater.find();
+        res.status(200).json({ theaters });
+    } catch (error) {
+        console.error('Fetch Operation Theaters Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+
+
 
 
 
@@ -473,5 +550,6 @@ module.exports = {registerHandler,getAllUsersHandler,createDepartmentHandler,get
     ,createSpecialtyHandler,getAllSpecialtiesHandler,createRoomCategoryHandler,getAllRoomCategoriesHandler,createWardHandler
     ,getAllWardsHandler,createLabourRoomHandler,getAllLabourRoomsHandler,createProcedureHandler,getAllProceduresHandler
     ,createManualChargeItemHandler,getAllManualChargeItemsHandler,getAllStaffHandler,getStaffByIdHandler
-    ,getAllDoctorsHandler,getDoctorByIdHandler
+    ,getAllDoctorsHandler,getDoctorByIdHandler,createReferralPartnerHandler,getAllReferralPartnersHandler,createOperationTheaterHandler
+    ,getAllOperationTheatersHandler
 };
