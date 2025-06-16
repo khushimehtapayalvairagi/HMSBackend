@@ -75,16 +75,42 @@ const getPatientByIdHandler = async (req, res) => {
     }
 };
 
-const createVisitHandler = async (req, res) => {
+const getAvailableDoctorsHandler = async (req, res) => {
     try {
-        const { patientId, visitType, referredBy } = req.body;
+        const { specialtyName, dayOfWeek } = req.query;
 
-       
-        if (!patientId || !visitType) {
-            return res.status(400).json({ message: 'patientId and visitType are required.' });
+        if (!specialtyName || !dayOfWeek) {
+            return res.status(400).json({ message: 'specialtyName and dayOfWeek are required.' });
         }
 
-        
+       
+        const specialty = await Specialty.findOne({ name: specialtyName.trim() });
+        if (!specialty) {
+            return res.status(404).json({ message: `Specialty '${specialtyName}' not found.` });
+        }
+
+        const doctors = await Doctor.find({
+            specialty: specialty._id,
+            schedule: { $elemMatch: { dayOfWeek, isAvailable: true } }
+        }).populate('userId', 'name email');
+
+        res.status(200).json({ doctors });
+    } catch (error) {
+        console.error('Fetch Doctors Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+
+const createVisitHandler = async (req, res) => {
+    try {
+        const { patientId, visitType, referredBy, assignedDoctorId} = req.body;
+
+       
+        if (!patientId || !visitType || !assignedDoctorId) {
+            return res.status(400).json({ message: 'patientId, visitType, and assignedDoctorName are required.' });
+        }
+
         const patient = await Patient.findOne({ patientId: patientId.trim() });
         if (!patient) {
             return res.status(404).json({ message: 'Patient not found.' });
@@ -92,7 +118,6 @@ const createVisitHandler = async (req, res) => {
 
         let referralPartnerId = null;
 
-        
         if (visitType === 'IPD_Referral') {
             if (!referredBy) {
                 return res.status(400).json({ message: 'Referral Partner is required for IPD_Referral visits.' });
@@ -106,8 +131,7 @@ const createVisitHandler = async (req, res) => {
             referralPartnerId = referralPartner._id;
         }
 
-      
-        if ((visitType === 'IPD_Admission' || visitType === 'OPD') && referredBy) {
+        if ((visitType === 'OPD' || visitType === 'IPD_Admission') && referredBy) {
             const referralPartner = await ReferralPartner.findOne({ name: referredBy.trim() });
             if (!referralPartner) {
                 return res.status(404).json({ message: `Referral Partner '${referredBy}' not found.` });
@@ -116,11 +140,17 @@ const createVisitHandler = async (req, res) => {
             referralPartnerId = referralPartner._id;
         }
 
+        
+        const doctor = await Doctor.findById(assignedDoctorId);
+        if (!doctor) {
+            return res.status(404).json({ message: 'Assigned doctor not found.' });
+        }
 
         const newVisit = new Visit({
-            patientId: patient.patientId, 
+            patientId: patient.patientId,
             visitType,
-            referredBy: referralPartnerId
+            referredBy: referralPartnerId,
+            assignedDoctorId: doctor._id
         });
 
         await newVisit.save();
@@ -143,7 +173,6 @@ const getVisitsByPatientHandler = async (req, res) => {
         res.status(500).json({ message: 'Server error.' });
     }
 };
-
 
 const updateVisitStatusHandler = async (req, res) => {
     try {
@@ -186,4 +215,5 @@ const updateVisitStatusHandler = async (req, res) => {
 };
 
 
-module.exports = {registerPatientHandler,getAllPatientsHandler,getPatientByIdHandler,createVisitHandler,getVisitsByPatientHandler,updateVisitStatusHandler}
+module.exports = {registerPatientHandler,getAllPatientsHandler,getPatientByIdHandler,createVisitHandler,getVisitsByPatientHandler
+                ,updateVisitStatusHandler,getAvailableDoctorsHandler}
