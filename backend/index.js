@@ -37,7 +37,7 @@ app.listen(PORT,()=>{
 })
 
 app.use('/api/auth',AuthHandler)
-app.use('/api/admin',restrictToLoggedInUserOnly,restrictTo(["ADMIN"]),AdminHandler);   
+app.use('/api/admin',AdminHandler);   
 app.use('/api/staff',restrictToLoggedInUserOnly,restrictTo(["ADMIN","STAFF"]),StaffHandler);   
 app.use('/api/receptionist',restrictToLoggedInUserOnly,restrictTo(["ADMIN","RECEPTIONIST"]),ReceptionistHandler);   
 app.use('/api/headnurse',restrictToLoggedInUserOnly,restrictTo(["ADMIN","HEADNURSE"]),HeadNurseHandler);  
