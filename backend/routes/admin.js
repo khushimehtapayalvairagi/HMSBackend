@@ -1,10 +1,33 @@
 const express = require("express");
-const {registerHandler,getAllUsersHandler,deleteUserHandler}  = require("../controllers/admin")
+const {registerHandler,getAllUsersHandler,createDepartmentHandler
+    ,getAllDepartmentsHandler,createSpecialtyHandler,getAllSpecialtiesHandler,createRoomCategoryHandler
+    ,getAllRoomCategoriesHandler,createWardHandler,getAllWardsHandler,createLabourRoomHandler,getAllLabourRoomsHandler
+    ,createProcedureHandler,getAllProceduresHandler,createManualChargeItemHandler,getAllManualChargeItemsHandler
+    ,getAllStaffHandler,getStaffByIdHandler,getAllDoctorsHandler
+    ,getDoctorByIdHandler}  = require("../controllers/admin")
+    
 const router = express.Router();
 
-router.post('/register', registerHandler); 
+router.post('/users', registerHandler); 
 router.get('/users', getAllUsersHandler);
-router.delete('/users/:id',deleteUserHandler);
+router.post('/departments',createDepartmentHandler);
+router.get('/departments',getAllDepartmentsHandler);
+router.post('/specialties', createSpecialtyHandler);
+router.get('/specialties', getAllSpecialtiesHandler);
+router.post('/room-categories', createRoomCategoryHandler);
+router.get('/room-categories', getAllRoomCategoriesHandler);
+router.post('/wards', createWardHandler);
+router.get('/wards', getAllWardsHandler);
+router.post('/labour-rooms', createLabourRoomHandler);
+router.get('/labour-rooms', getAllLabourRoomsHandler);
+router.post('/procedures', createProcedureHandler);
+router.get('/procedures', getAllProceduresHandler);
+router.post('/manual-charge-items', createManualChargeItemHandler);
+router.get('/manual-charge-items', getAllManualChargeItemsHandler);
+router.get('/staff', getAllStaffHandler);
+router.get('/staff/:id', getStaffByIdHandler);
+router.get('/doctors', getAllDoctorsHandler);
+router.get('/doctors/:id', getDoctorByIdHandler);
 
 
 module.exports = router;

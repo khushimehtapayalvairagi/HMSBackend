@@ -23,10 +23,8 @@ app.use(cors({
 
 const AuthHandler = require("./routes/auth");
 const AdminHandler = require("./routes/admin");
-const StaffHandler = require("./routes/staff");
 const ReceptionistHandler = require("./routes/receptionist");
-const HeadNurseHandler = require("./routes/headnurse");
-const DoctorHandler = require("./routes/doctor");
+
 
 
 // Database Connection
@@ -38,7 +36,7 @@ app.listen(PORT,()=>{
 
 app.use('/api/auth',AuthHandler)
 app.use('/api/admin',restrictToLoggedInUserOnly,restrictTo(["ADMIN"]),AdminHandler);   
-app.use('/api/staff',restrictToLoggedInUserOnly,restrictTo(["ADMIN","STAFF"]),StaffHandler);   
+// app.use('/api/staff',restrictToLoggedInUserOnly,restrictTo(["ADMIN","STAFF"]),StaffHandler);   
 app.use('/api/receptionist',restrictToLoggedInUserOnly,restrictTo(["ADMIN","RECEPTIONIST"]),ReceptionistHandler);   
-app.use('/api/headnurse',restrictToLoggedInUserOnly,restrictTo(["ADMIN","HEADNURSE"]),HeadNurseHandler);  
-app.use('/api/doctor',restrictToLoggedInUserOnly,restrictTo(["ADMIN","DOCTOR"]),DoctorHandler);
+// app.use('/api/headnurse',restrictToLoggedInUserOnly,restrictTo(["ADMIN","HEADNURSE"]),HeadNurseHandler);  
+// app.use('/api/doctor',restrictToLoggedInUserOnly,restrictTo(["ADMIN","DOCTOR"]),DoctorHandler);
