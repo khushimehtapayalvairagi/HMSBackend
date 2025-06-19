@@ -7,7 +7,7 @@ router.post('/patients', registerPatientHandler);
 router.get('/patients', getAllPatientsHandler);
 router.get('/patients/:id', getPatientByIdHandler);
 
-router.get('/doctors', getAvailableDoctorsHandler);
+router.post('/doctors', getAvailableDoctorsHandler);
 router.post('/visits',  createVisitHandler);
 router.get('/visits/:patientId',  getVisitsByPatientHandler);
 
