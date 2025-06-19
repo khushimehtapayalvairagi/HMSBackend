@@ -1,31 +1,61 @@
+const mongoose = require('mongoose');
+
 const User = require('../models/User'); 
+const Department = require('../models/Department');
+const Specialty = require('../models/Specialty');
+const RoomCategory = require('../models/Room');
+const Ward = require('../models/Ward');
+const LabourRoom = require('../models/LabourRoom');
+const Procedure = require('../models/Procedure');
+const ManualChargeItem = require('../models/ManualChargeItem');
+const Doctor = require('../models/Doctor');
+const Staff = require('../models/Staff');
+const ReferralPartner = require('../models/ReferralPartner');
+const OperationTheater = require('../models/OperationTheater');
+
 const bcrypt = require('bcrypt');
 
+
 const registerHandler = async (req, res) => {
-    // console.log("Registering:", req.body);
+
+  
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
-        const { name, email, password, role } = req.body;
+        const { name, email, password, role, doctorType, specialty, medicalLicenseNumber, schedule, contactNumber, designation, department } = req.body;
+     
+        const requesterRole = req.user.role;
 
-        // const requesterRole = req.user.role; 
-        
-        // // if (requesterRole === 'ADMIN') {
-        // //     if (role === 'ADMIN') {
-        // //         return res.status(403).json({ message: 'Admin cannot create another admin.' });
-        // //     }
-        // // } else if (requesterRole === 'STAFF') {
-        // //     if (role !== 'DOCTOR' && role !== 'HEADNURSE' && role !== 'NURSE') {
-        // //         return res.status(403).json({ message: 'Staff can only create doctor, head nurse, or nurse.' });
-        // //     }
-        // // } else if (requesterRole === 'RECEPTIONIST') {
-        // //     if (role !== 'PATIENT') {
-        // //         return res.status(403).json({ message: 'Receptionist can only create patients.' });
-        // //     }
-        // // } else {
-        // //     return res.status(403).json({ message: 'You are not allowed to register users.' });
-        // // }
+       
+        if (!name || !email || !password || !role) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({ message: 'Name, email, password, and role are required.' });
+        }
 
+     
+        if (requesterRole === 'ADMIN') {
+            if (role === 'ADMIN') {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(403).json({ message: 'Admin cannot create another admin.' });
+            }
+        } else if (['RECEPTIONIST', 'NURSE', 'DOCTOR', 'INVENTORYMANAGER'].includes(requesterRole)) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(403).json({ message: 'You are not allowed to register users.' });
+        } else {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(403).json({ message: 'Invalid requester role.' });
+        }
+
+       
         const existingUser = await User.findOne({ email });
         if (existingUser) {
+            await session.abortTransaction();
+            session.endSession();
             return res.status(400).json({ message: 'User with this email already exists.' });
         }
 
@@ -33,7 +63,7 @@ const registerHandler = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-  
+
         const newUser = new User({
             name,
             email,
@@ -41,11 +71,111 @@ const registerHandler = async (req, res) => {
             role
         });
 
-        await newUser.save();
+        await newUser.save({ session });
 
-        res.status(201).json({ message: 'User registered successfully.' });
+
+      if (role?.toUpperCase() === 'DOCTOR') {
+                      console.log('Registering Doctor...');
+    console.log('Specialty:', specialty);
+            if (!doctorType || !specialty || !medicalLicenseNumber) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(400).json({ message: 'doctorType, specialty, and medicalLicenseNumber are required for doctor registration.' });
+            }
+
+            const specialtyData = await Specialty.findOne({  name: new RegExp(`^${specialty.trim()}$`, 'i') });
+                    console.log('Found specialtyData:', specialtyData);
+            if (!specialtyData) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(400).json({ message: `Specialty '${specialty}' not found.` });
+            }
+                   
+    console.log('Schedule:', schedule);
+            if (!Array.isArray(schedule) || schedule.length === 0) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(400).json({ message: 'Schedule must be a non-empty array.' });
+            }
+
+            const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+            for (const entry of schedule) {
+                const { dayOfWeek, startTime, endTime, isAvailable } = entry;
+
+                if (!validDays.includes(dayOfWeek)) {
+                    await session.abortTransaction();
+                    session.endSession();
+                    return res.status(400).json({ message: `Invalid dayOfWeek: ${dayOfWeek}` });
+                }
+
+                if (!startTime || !endTime) {
+                    await session.abortTransaction();
+                    session.endSession();
+                    return res.status(400).json({ message: 'Start time and end time are required for each schedule entry.' });
+                }
+
+                if (typeof isAvailable !== 'boolean') {
+                    await session.abortTransaction();
+                    session.endSession();
+                    return res.status(400).json({ message: 'isAvailable must be true or false.' });
+                }
+            }
+
+            const doctor = new Doctor({
+                userId: newUser._id,
+                doctorType,
+                specialty: specialtyData._id,
+                medicalLicenseNumber,
+                schedule
+            });
+
+            await doctor.save({ session });
+
+            await session.commitTransaction();
+            session.endSession();
+
+            return res.status(201).json({ message: 'Doctor registered successfully with schedule.', userId: newUser._id, doctor });
+
+        } else {
+           
+            if (!contactNumber || !designation) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(400).json({ message: 'Contact number and designation are required for staff registration.' });
+            }
+
+            let departmentId = null;
+
+            if (department) {
+                const departmentData = await Department.findOne({ name: department.trim() });
+                if (!departmentData) {
+                    await session.abortTransaction();
+                    session.endSession();
+                    return res.status(400).json({ message: `Department '${department}' not found.` });
+                }
+                departmentId = departmentData._id;
+            }
+
+            const staff = new Staff({
+                userId: newUser._id,
+                contactNumber,
+                designation,
+                department: departmentId
+            });
+
+            await staff.save({ session });
+
+            await session.commitTransaction();
+            session.endSession();
+
+            return res.status(201).json({ message: 'Staff registered successfully.', userId: newUser._id, staff });
+        }
+
     } catch (error) {
         console.error('Registration error:', error);
+        await session.abortTransaction();
+        session.endSession();
         res.status(500).json({ message: 'Server error.' });
     }
 };
@@ -66,25 +196,365 @@ const getAllUsersHandler = async (req, res) => {
     }
 };
 
-const deleteUserHandler = async (req, res) => {
+const createDepartmentHandler = async (req, res) => {
+    try {
+        const { name, description } = req.body;
+        if(!name || !description) return res.status(404).json({message: "name and description is required"});
+
+        const existing = await Department.findOne({ name });
+        if (existing) return res.status(400).json({ message: 'Department already exists.' });
+
+        const department = new Department({ name, description });
+        await department.save();
+
+        res.status(201).json({ message: 'Department created successfully.', department });
+    } catch (error) {
+        console.error('Create Department Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+const getAllDepartmentsHandler = async (req, res) => {
+    try {
+        const departments = await Department.find();
+        res.status(200).json({ departments });
+    } catch (error) {
+        console.error('Get Departments Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+const createSpecialtyHandler = async (req, res) => {
+    try {
+        const { name, description } = req.body;
+        if(!name || !description) return res.status(404).json({message: "name and description is required"});
+
+        const existing = await Specialty.findOne({ name });
+        if (existing) return res.status(400).json({ message: 'Specialty already exists.' });
+
+        const specialty = new Specialty({ name, description });
+        await specialty.save();
+
+        res.status(201).json({ message: 'Specialty created successfully.', specialty });
+    } catch (error) {
+        console.error('Create Specialty Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+const getAllSpecialtiesHandler = async (req, res) => {
+    try {
+        const specialties = await Specialty.find();
+        res.status(200).json({ specialties });
+    } catch (error) {
+        console.error('Get Specialties Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+const createRoomCategoryHandler = async (req, res) => {
+    try {
+        const { name, description } = req.body;
+        
+        if(!name || !description) return res.status(404).json({message: "name and description is required"});
+
+
+        const existing = await RoomCategory.findOne({ name });
+        if (existing) return res.status(400).json({ message: 'Room category already exists.' });
+
+        const roomCategory = new RoomCategory({ name, description });
+        await roomCategory.save();
+
+        res.status(201).json({ message: 'Room category created successfully.', roomCategory });
+    } catch (error) {
+        console.error('Create Room Category Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+const getAllRoomCategoriesHandler = async (req, res) => {
+    try {
+        const roomCategories = await RoomCategory.find();
+        res.status(200).json({ roomCategories });
+    } catch (error) {
+        console.error('Get Room Categories Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+const createWardHandler = async (req, res) => {
+    try {
+        const { name, roomCategory, beds } = req.body;
+
+        if (!name || !roomCategory || !beds || !Array.isArray(beds) || beds.length === 0) {
+            return res.status(400).json({ message: 'Name, roomCategory, and a non-empty beds array are required.' });
+        }
+
+        const existingWard = await Ward.findOne({ name: name.trim() });
+        if (existingWard) {
+            return res.status(400).json({ message: 'Ward already exists.' });
+        }
+
+        const bedNumbers = beds.map(bed => bed.bedNumber);
+        const uniqueBedNumbers = new Set(bedNumbers);
+
+        if (uniqueBedNumbers.size !== bedNumbers.length) {
+            return res.status(400).json({ message: 'Duplicate bed numbers found in the request.' });
+        }
+
+        const roomCategoryData = await RoomCategory.findOne({ name: roomCategory.trim() });
+        if (!roomCategoryData) {
+            return res.status(400).json({ message: `Room Category '${roomCategory}' not found.` });
+        }
+
+        const ward = new Ward({
+            name: name.trim(),
+            roomCategory: roomCategoryData._id,
+            beds
+        });
+
+        await ward.save();
+
+        res.status(201).json({ message: 'Ward created successfully.', ward });
+
+    } catch (error) {
+        console.error('Create Ward Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+const getAllWardsHandler = async (req, res) => {
+    try {
+        const wards = await Ward.find().populate('roomCategory');
+        res.status(200).json({ wards });
+    } catch (error) {
+        console.error('Get Wards Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+const createLabourRoomHandler = async (req, res) => {
+    try {
+        const { name, description } = req.body;
+        
+        if(!name || !description) return res.status(404).json({message: "name and description is required"});
+
+        const existing = await LabourRoom.findOne({ name });
+        if (existing) return res.status(400).json({ message: 'Labour Room already exists.' });
+
+        const labourRoom = new LabourRoom({ name, description });
+        await labourRoom.save();
+
+        res.status(201).json({ message: 'Labour Room created successfully.', labourRoom });
+    } catch (error) {
+        console.error('Create Labour Room Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+const getAllLabourRoomsHandler = async (req, res) => {
+    try {
+        const labourRooms = await LabourRoom.find();
+        res.status(200).json({ labourRooms });
+    } catch (error) {
+        console.error('Get Labour Rooms Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+const createProcedureHandler = async (req, res) => {
+    try {
+        const { name, description, cost } = req.body;
+
+        if(!name || !description || !cost) return res.status(404).json({message: "name,description & cost is required"});
+
+
+        const existing = await Procedure.findOne({ name });
+        if (existing) return res.status(400).json({ message: 'Procedure already exists.' });
+
+        const procedure = new Procedure({ name, description, cost });
+        await procedure.save();
+
+        res.status(201).json({ message: 'Procedure created successfully.', procedure });
+    } catch (error) {
+        console.error('Create Procedure Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+const getAllProceduresHandler = async (req, res) => {
+    try {
+        const procedures = await Procedure.find();
+        res.status(200).json({ procedures });
+    } catch (error) {
+        console.error('Get Procedures Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+const createManualChargeItemHandler = async (req, res) => {
+    try {
+        const { itemName, category, defaultPrice, description } = req.body;
+
+        if(!itemName || !description || !category || !defaultPrice) return res.status(404).json({message: "name,description,category and defaultPrice is required"});
+
+        const existing = await ManualChargeItem.findOne({ itemName });
+        if (existing) return res.status(400).json({ message: 'Manual charge item already exists.' });
+
+        const item = new ManualChargeItem({ itemName, category, defaultPrice, description });
+        await item.save();
+
+        res.status(201).json({ message: 'Manual charge item created successfully.', item });
+    } catch (error) {
+        console.error('Create Manual Charge Item Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+const getAllManualChargeItemsHandler = async (req, res) => {
+    try {
+        const items = await ManualChargeItem.find();
+        res.status(200).json({ items });
+    } catch (error) {
+        console.error('Get Manual Charge Items Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+
+const getAllStaffHandler = async (req, res) => {
+    try {
+        const staffList = await Staff.find().populate('userId', 'name email role').populate('department', 'name');
+        res.status(200).json({ staff: staffList });
+    } catch (error) {
+        console.error('Fetch Staff Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+const getStaffByIdHandler = async (req, res) => {
     try {
         const { id } = req.params;
 
-      
-        const user = await User.findById(id);
-        if (!user) {
-            return res.status(404).json({ message: 'User not found.' });
+        const staff = await Staff.findById(id).populate('userId', 'name email role').populate('department', 'name');
+        if (!staff) return res.status(404).json({ message: 'Staff not found.' });
+
+        res.status(200).json({ staff });
+    } catch (error) {
+        console.error('Fetch Staff By ID Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+const getAllDoctorsHandler = async (req, res) => {
+    try {
+        const doctors = await Doctor.find().populate('userId', 'name email role').populate('specialty', 'name');
+        res.status(200).json({ doctors });
+    } catch (error) {
+        console.error('Fetch Doctors Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+const getDoctorByIdHandler = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const doctor = await Doctor.findById(id).populate('userId', 'name email role').populate('specialty', 'name');
+        if (!doctor) return res.status(404).json({ message: 'Doctor not found.' });
+
+        res.status(200).json({ doctor });
+    } catch (error) {
+        console.error('Fetch Doctor By ID Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+const createReferralPartnerHandler = async (req, res) => {
+    try {
+        const { name, contactNumber } = req.body;
+
+        if (!name || !contactNumber) {
+            return res.status(400).json({ message: 'All fields are required.' });
         }
 
-        await User.findByIdAndDelete(id);
+        const existing = await ReferralPartner.findOne({ name: name.trim() });
+        if (existing) {
+            return res.status(400).json({ message: 'Referral Partner already exists.' });
+        }
 
-        res.status(200).json({ message: 'User deleted successfully.' });
+        const partner = new ReferralPartner({
+            name: name.trim(),
+            contactNumber: contactNumber.trim()
+        });
+
+        await partner.save();
+
+        res.status(201).json({ message: 'Referral Partner created successfully.', partner });
     } catch (error) {
-        console.error('Delete User Error:', error);
+        console.error('Create Referral Partner Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+const getAllReferralPartnersHandler = async (req, res) => {
+    try {
+        const partners = await ReferralPartner.find();
+        res.status(200).json({ partners });
+    } catch (error) {
+        console.error('Fetch Referral Partners Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+const createOperationTheaterHandler = async (req, res) => {
+    try {
+        const { name, status } = req.body;
+
+        if (!name) {
+            return res.status(400).json({ message: 'Theater name is required.' });
+        }
+
+        const existing = await OperationTheater.findOne({ name: name.trim() });
+        if (existing) {
+            return res.status(400).json({ message: 'Operation Theater already exists.' });
+        }
+
+        const theater = new OperationTheater({
+            name: name.trim(),
+            status: status || 'Available'
+        });
+
+        await theater.save();
+
+        res.status(201).json({ message: 'Operation Theater created successfully.', theater });
+    } catch (error) {
+        console.error('Create Operation Theater Error:', error);
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+const getAllOperationTheatersHandler = async (req, res) => {
+    try {
+        const theaters = await OperationTheater.find();
+        res.status(200).json({ theaters });
+    } catch (error) {
+        console.error('Fetch Operation Theaters Error:', error);
         res.status(500).json({ message: 'Server error.' });
     }
 };
 
 
 
-module.exports = {registerHandler,getAllUsersHandler,deleteUserHandler};
+
+
+
+
+
+module.exports = {registerHandler,getAllUsersHandler,createDepartmentHandler,getAllDepartmentsHandler
+    ,createSpecialtyHandler,getAllSpecialtiesHandler,createRoomCategoryHandler,getAllRoomCategoriesHandler,createWardHandler
+    ,getAllWardsHandler,createLabourRoomHandler,getAllLabourRoomsHandler,createProcedureHandler,getAllProceduresHandler
+    ,createManualChargeItemHandler,getAllManualChargeItemsHandler,getAllStaffHandler,getStaffByIdHandler
+    ,getAllDoctorsHandler,getDoctorByIdHandler,createReferralPartnerHandler,getAllReferralPartnersHandler,createOperationTheaterHandler
+    ,getAllOperationTheatersHandler
+};

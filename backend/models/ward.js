@@ -1,9 +1,14 @@
 const mongoose = require('mongoose');
 
+const BedSchema = new mongoose.Schema({
+    bedNumber: { type: String, required: true, unique:true},
+    status: { type: String, enum: ['available', 'occupied', 'cleaning'], default: 'available' }
+});
+
 const WardSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    capacity: { type: Number, required: true },
-    currentOccupancy: { type: Number, default: 0 }
+    name: { type: String, required: true, unique: true },
+    roomCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'Room' },
+    beds: [BedSchema]
 });
 
 module.exports = mongoose.model('Ward', WardSchema);
