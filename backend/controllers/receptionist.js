@@ -2,6 +2,7 @@ const Patient = require('../models/Patient');
 const Visit = require('../models/Visit');
 const ReferralPartner = require('../models/ReferralPartner');
 const Doctor = require('../models/Doctor');
+const Specialty = require('../models/Specialty')
 
 const { io } = require('../utils/sockets');
 
@@ -134,7 +135,6 @@ const createVisitHandler = async (req, res) => {
             }
         }
 
-       
         const patient = await Patient.findOne({ patientId: patientId.trim() });
         if (!patient) {
             return res.status(404).json({ message: 'Patient not found.' });
