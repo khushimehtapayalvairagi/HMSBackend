@@ -135,7 +135,7 @@ const registerHandler = async (req, res) => {
             await session.commitTransaction();
             session.endSession();
 
-            return res.status(201).json({ message: 'Doctor registered successfully with schedule.', userId: newUser._id, doctor });
+            return res.status(201).json({ message: 'Doctor registered successfully with schedule.', userId: newUser._id, doctorId: doctor._id  });
 
         } else {
            
