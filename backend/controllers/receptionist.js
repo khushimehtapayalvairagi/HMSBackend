@@ -2,6 +2,7 @@ const Patient = require('../models/Patient');
 const Visit = require('../models/Visit');
 const ReferralPartner = require('../models/ReferralPartner');
 const Doctor = require('../models/Doctor');
+
 const Specialty = require('../models/Specialty');
 const {  getIO } = require('../utils/sockets');
 
@@ -124,7 +125,6 @@ const createVisitHandler = async (req, res) => {
             }
         }
 
-       
         const patient = await Patient.findOne({ patientId: patientId.trim() });
         if (!patient) {
             return res.status(404).json({ message: 'Patient not found.' });
@@ -169,22 +169,21 @@ const createVisitHandler = async (req, res) => {
             patientDbId: patient._id,    
             visitType,
             referredBy: referralPartnerId,
-           
-            assignedDoctorId: doctor.userId,
+           assignedDoctorId:  doctor.userId,
+
             payment: visitType === 'OPD' ? payment : undefined
         });
 
         await newVisit.save();
 console.log('Saved Visit:', newVisit);
-       getIO().to(`doctor_${newVisit.assignedDoctorId}`).emit('newAssignedPatient', {
-            visitId: newVisit._id,
-
-            patientId: newVisit.patientId,
-            visitType: newVisit.visitType,
+//        getIO().to(`doctor_${newVisit.assignedDoctorId}`).emit('newAssignedPatient', {
+//             visitId: newVisit._id,
+//             patientId: newVisit.patientId,
+//             visitType: newVisit.visitType,
               
        
-        });
-console.log(`Emitting newAssignedPatient event to doctor_${newVisit.assignedDoctorId}`)
+//         });
+// console.log(`Emitting newAssignedPatient event to doctor_${newVisit.assignedDoctorId}`)
     
         res.status(201).json({ message: 'Visit created successfully.', visit: newVisit });
     } catch (error) {
@@ -220,25 +219,21 @@ const updateVisitStatusHandler = async (req, res) => {
         const { id } = req.params;
         const { newStatus, declineReason } = req.body;
 
-   
         const allowedStatuses = ['Waiting', 'Declined', 'Completed'];
 
-       
         if (!newStatus || !allowedStatuses.includes(newStatus)) {
             return res.status(400).json({ message: `Invalid status. Allowed statuses: ${allowedStatuses.join(', ')}` });
         }
 
-    
         if (newStatus === 'Declined' && (!declineReason || declineReason.trim() === '')) {
             return res.status(400).json({ message: 'declineReason is required when visit is declined.' });
         }
-   
+
         const visit = await Visit.findById(id);
         if (!visit) {
             return res.status(404).json({ message: 'Visit not found.' });
         }
 
-  
         visit.status = newStatus;
 
         if (newStatus === 'Declined') {
@@ -247,7 +242,19 @@ const updateVisitStatusHandler = async (req, res) => {
             visit.declineReason = undefined;
         }
 
+       
+  
+
+
+
         await visit.save();
+        if (newStatus === 'Waiting') {
+  getIO().to(`doctor_${visit.assignedDoctorId}`).emit('newAssignedPatient', {
+    doctorId: visit.assignedDoctorId,
+    visitId: visit._id,
+    patientName: visit.patientDbId?.fullName || 'New patient',
+  });
+}
 
         res.status(200).json({ message: 'Visit status updated successfully.', visit });
     } catch (error) {
@@ -255,6 +262,7 @@ const updateVisitStatusHandler = async (req, res) => {
         res.status(500).json({ message: 'Server error.' });
     }
 };
+
 
 
 module.exports = {registerPatientHandler,getAllPatientsHandler,getPatientByIdHandler,createVisitHandler,getVisitsByPatientHandler

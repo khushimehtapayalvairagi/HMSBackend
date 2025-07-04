@@ -23,32 +23,36 @@ app.use(cors({
 
 
 
+const AuthHandler = require('./routes/auth');
+const AdminHandler = require('./routes/admin');
+const ReceptionistHandler = require('./routes/receptionist');
+const doctorHandler = require('./routes/doctor');
+const ipdHandler = require('./routes/ipd');
+const procedure = require('./routes/procedure');
 
 
-const AuthHandler = require("./routes/auth");
-const AdminHandler = require("./routes/admin");
-// const StaffHandler = require("./routes/staff");
-const ReceptionistHandler = require("./routes/receptionist");
-// const HeadNurseHandler = require("./routes/headnurse");
-const DoctorHandler = require("./routes/doctor");
+
+
 
 
 // Database Connect
 connectDB(process.env.DATABASE_URL);
 
+
+
+
+
+
+
+
+
+app.use('/api/auth', AuthHandler);
+app.use('/api/admin', restrictToLoggedInUserOnly, restrictTo(['ADMIN']), AdminHandler);
+app.use('/api/receptionist', restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'RECEPTIONIST']), ReceptionistHandler);
+app.use('/api/doctor', restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'DOCTOR']), doctorHandler);
+app.use('/api/ipd', restrictToLoggedInUserOnly,restrictTo(['ADMIN','RECEPTIONIST','DOCTOR','NURSE']), ipdHandler);
+app.use('/api/procedures', restrictToLoggedInUserOnly,restrictTo(['ADMIN','RECEPTIONIST','DOCTOR','NURSE']), procedure);
+
 server.listen(PORT, () => {
     console.log(`Server is listening at PORT: ${PORT}`);
 });
-
-
-app.use('/api/auth',AuthHandler)
-app.use('/api/admin',restrictToLoggedInUserOnly,restrictTo(["ADMIN","RECEPTIONIST"]),AdminHandler);   
-// app.use('/api/staff',restrictToLoggedInUserOnly,restrictTo(["ADMIN","STAFF"]),StaffHandler);   
-app.use('/api/receptionist',restrictToLoggedInUserOnly,restrictTo(["ADMIN","RECEPTIONIST"]),ReceptionistHandler);   
-// app.use('/api/headnurse',restrictToLoggedInUserOnly,restrictTo(["ADMIN","HEADNURSE"]),HeadNurseHandler);  
-app.use('/api/doctor',restrictToLoggedInUserOnly,restrictTo(["ADMIN","DOCTOR"]),DoctorHandler);
-
-
-
-
-

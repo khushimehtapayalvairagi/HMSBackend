@@ -9,6 +9,7 @@ const VisitSchema = new mongoose.Schema({
 
     assignedDoctorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Doctor', required: true },
 
+
     visitDate: { type: Date, default: Date.now },
 
     status: { type: String, enum: ['Registered', 'Waiting', 'Declined', 'Completed'], default: 'Registered' },

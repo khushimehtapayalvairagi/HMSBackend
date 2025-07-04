@@ -50,7 +50,6 @@ const createOPDConsultationHandler = async (req, res) => {
         });
 
         await consultation.save();
-
        
         visit.status = 'Completed';
         await visit.save();
@@ -59,6 +58,8 @@ const createOPDConsultationHandler = async (req, res) => {
         getIO().to('receptionist_room').emit('newIPDAdmissionAdvice', {
             patientId: consultation.patientId,
             visitId: consultation.visitId,
+          admittingDoctorId: visit.assignedDoctorId ,
+
             doctorId: consultation.doctorId,
             chiefComplaint: consultation.chiefComplaint
         });
