@@ -176,14 +176,14 @@ const createVisitHandler = async (req, res) => {
 
         await newVisit.save();
 console.log('Saved Visit:', newVisit);
-//        getIO().to(`doctor_${newVisit.assignedDoctorId}`).emit('newAssignedPatient', {
-//             visitId: newVisit._id,
-//             patientId: newVisit.patientId,
-//             visitType: newVisit.visitType,
+       getIO().to(`doctor_${newVisit.assignedDoctorId}`).emit('newAssignedPatient', {
+            visitId: newVisit._id,
+            patientId: newVisit.patientId,
+            visitType: newVisit.visitType,
               
        
-//         });
-// console.log(`Emitting newAssignedPatient event to doctor_${newVisit.assignedDoctorId}`)
+        });
+console.log(`Emitting newAssignedPatient event to doctor_${newVisit.assignedDoctorId}`)
     
         res.status(201).json({ message: 'Visit created successfully.', visit: newVisit });
     } catch (error) {
@@ -198,6 +198,7 @@ const getVisitsByPatientHandler = async (req, res) => {
 
         const visits = await Visit.find({ patientId: patientId })
             .sort({ visitDate: -1 })
+          
             .populate({
                 path: 'assignedDoctorId',
                 populate: { path: 'userId', select: 'name email' }
