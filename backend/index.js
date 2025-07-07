@@ -30,21 +30,13 @@ const doctorHandler = require('./routes/doctor');
 const ipdHandler = require('./routes/ipd');
 const procedure = require('./routes/procedure');
 
-
-
-
-
-
 // Database Connect
 connectDB(process.env.DATABASE_URL);
 
 
-
-
-
-
-
-
+server.listen(PORT, () => {
+    console.log(`Server is listening at PORT: ${PORT}`);
+});
 
 app.use('/api/auth', AuthHandler);
 app.use('/api/admin', restrictToLoggedInUserOnly, restrictTo(['ADMIN']), AdminHandler);
@@ -53,6 +45,4 @@ app.use('/api/doctor', restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'DOCTOR'
 app.use('/api/ipd', restrictToLoggedInUserOnly,restrictTo(['ADMIN','RECEPTIONIST','DOCTOR','NURSE']), ipdHandler);
 app.use('/api/procedures', restrictToLoggedInUserOnly,restrictTo(['ADMIN','RECEPTIONIST','DOCTOR','NURSE']), procedure);
 
-server.listen(PORT, () => {
-    console.log(`Server is listening at PORT: ${PORT}`);
-});
+

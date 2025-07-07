@@ -2,6 +2,7 @@ const Patient = require('../models/Patient');
 const Visit = require('../models/Visit');
 const ReferralPartner = require('../models/ReferralPartner');
 const Doctor = require('../models/Doctor');
+const Specialty = require('../models/Specialty')
 
 const Specialty = require('../models/Specialty');
 const {  getIO } = require('../utils/sockets');
