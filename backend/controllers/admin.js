@@ -17,12 +17,14 @@ const bcrypt = require('bcrypt');
 
 
 const registerHandler = async (req, res) => {
+
+  
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
         const { name, email, password, role, doctorType, specialty, medicalLicenseNumber, schedule, contactNumber, designation, department } = req.body;
-
+     
         const requesterRole = req.user.role;
 
        
@@ -72,21 +74,24 @@ const registerHandler = async (req, res) => {
         await newUser.save({ session });
 
 
-        if (role === 'DOCTOR') {
-
+      if (role?.toUpperCase() === 'DOCTOR') {
+                      console.log('Registering Doctor...');
+    console.log('Specialty:', specialty);
             if (!doctorType || !specialty || !medicalLicenseNumber) {
                 await session.abortTransaction();
                 session.endSession();
                 return res.status(400).json({ message: 'doctorType, specialty, and medicalLicenseNumber are required for doctor registration.' });
             }
 
-            const specialtyData = await Specialty.findOne({ name: specialty.trim() });
+            const specialtyData = await Specialty.findOne({  name: new RegExp(`^${specialty.trim()}$`, 'i') });
+                    console.log('Found specialtyData:', specialtyData);
             if (!specialtyData) {
                 await session.abortTransaction();
                 session.endSession();
                 return res.status(400).json({ message: `Specialty '${specialty}' not found.` });
             }
-
+                   
+    console.log('Schedule:', schedule);
             if (!Array.isArray(schedule) || schedule.length === 0) {
                 await session.abortTransaction();
                 session.endSession();
@@ -130,7 +135,7 @@ const registerHandler = async (req, res) => {
             await session.commitTransaction();
             session.endSession();
 
-            return res.status(201).json({ message: 'Doctor registered successfully with schedule.', userId: newUser._id, doctor });
+            return res.status(201).json({ message: 'Doctor registered successfully with schedule.', userId: newUser._id, doctorId: doctor._id  });
 
         } else {
            

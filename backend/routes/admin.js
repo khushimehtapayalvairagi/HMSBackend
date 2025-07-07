@@ -8,8 +8,8 @@ const {registerHandler,getAllUsersHandler,createDepartmentHandler
     ,getAllOperationTheatersHandler}  = require("../controllers/admin")
 
 const router = express.Router();
-
 router.post('/users', registerHandler); 
+
 router.get('/users', getAllUsersHandler);
 router.post('/departments',createDepartmentHandler);
 router.get('/departments',getAllDepartmentsHandler);

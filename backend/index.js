@@ -17,9 +17,10 @@ setupSocket(server);
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({
-    origin: 'http://localhost:5174',
+    origin: 'http://localhost:3000',
     credentials: true
 }));
+
 
 
 const AuthHandler = require('./routes/auth');
@@ -29,13 +30,13 @@ const doctorHandler = require('./routes/doctor');
 const ipdHandler = require('./routes/ipd');
 const procedure = require('./routes/procedure');
 
-
+// Database Connect
 connectDB(process.env.DATABASE_URL);
+
 
 server.listen(PORT, () => {
     console.log(`Server is listening at PORT: ${PORT}`);
 });
-
 
 app.use('/api/auth', AuthHandler);
 app.use('/api/admin', restrictToLoggedInUserOnly, restrictTo(['ADMIN']), AdminHandler);
@@ -43,3 +44,5 @@ app.use('/api/receptionist', restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'R
 app.use('/api/doctor', restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'DOCTOR']), doctorHandler);
 app.use('/api/ipd', restrictToLoggedInUserOnly,restrictTo(['ADMIN','RECEPTIONIST','DOCTOR','NURSE']), ipdHandler);
 app.use('/api/procedures', restrictToLoggedInUserOnly,restrictTo(['ADMIN','RECEPTIONIST','DOCTOR','NURSE']), procedure);
+
+

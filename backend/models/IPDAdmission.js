@@ -6,7 +6,7 @@ const IPDAdmissionSchema = new mongoose.Schema({
     admissionDate: { type: Date, default: Date.now },
     wardId: { type: mongoose.Schema.Types.ObjectId, ref: 'Ward', required: true },
     bedNumber: { type: String, required: true },
-    roomCategoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'RoomCategory', required: true },
+    roomCategoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Room', required: true },
     admittingDoctorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Doctor', required: true },
     expectedDischargeDate: { type: Date },
     actualDischargeDate: { type: Date },

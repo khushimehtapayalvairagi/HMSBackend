@@ -1,7 +1,8 @@
 const OPDConsultation = require('../models/OPDConsultation');
 const Visit = require('../models/Visit');
 const Patient = require('../models/Patient');
-
+const {  getIO } = require('../utils/sockets');
+const mongoose = require('mongoose');
 
 
 const createOPDConsultationHandler = async (req, res) => {
@@ -54,9 +55,11 @@ const createOPDConsultationHandler = async (req, res) => {
         await visit.save();
 
         if (consultation.admissionAdvice === true) {
-        io.to('receptionist_room').emit('newIPDAdmissionAdvice', {
+        getIO().to('receptionist_room').emit('newIPDAdmissionAdvice', {
             patientId: consultation.patientId,
             visitId: consultation.visitId,
+          admittingDoctorId: visit.assignedDoctorId ,
+
             doctorId: consultation.doctorId,
             chiefComplaint: consultation.chiefComplaint
         });
@@ -83,7 +86,9 @@ const getPatientOPDConsultationsHandler = async (req, res) => {
                 path: 'transcribedByUserId',
                 select: 'name email'
             });
+            
 
+            
         res.status(200).json({ consultations });
     } catch (error) {
         console.error('Fetch OPD Consultations Error:', error);
@@ -92,12 +97,16 @@ const getPatientOPDConsultationsHandler = async (req, res) => {
 };
 
 const getAssignedVisitsForDoctorHandler = async (req, res) => {
+   
     try {
-        const { doctorId } = req.params;
+
+     const { doctorId } = req.params;
+         console.log('Doctor ID:', doctorId);
+
 
         const visits = await Visit.find({ 
-            assignedDoctorId: doctorId, 
-            status: 'Waiting' 
+             assignedDoctorId: new mongoose.Types.ObjectId(doctorId) 
+            
         })
         .populate('patientDbId')
         .populate({
@@ -105,7 +114,7 @@ const getAssignedVisitsForDoctorHandler = async (req, res) => {
             select: 'name contact_person contact_number'
         })
         .sort({ visitDate: -1 });
-
+  console.log('Visits:', visits);
         res.status(200).json({ visits });
     } catch (error) {
         console.error('Fetch Doctor Visits Error:', error);

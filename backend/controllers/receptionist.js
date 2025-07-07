@@ -4,7 +4,8 @@ const ReferralPartner = require('../models/ReferralPartner');
 const Doctor = require('../models/Doctor');
 const Specialty = require('../models/Specialty')
 
-const { io } = require('../utils/sockets');
+const Specialty = require('../models/Specialty');
+const {  getIO } = require('../utils/sockets');
 
 
 const generatePatientId = () => {
@@ -81,42 +82,32 @@ const getPatientByIdHandler = async (req, res) => {
 };
 
 const getAvailableDoctorsHandler = async (req, res) => {
-    try {
-        const { specialtyName, dayOfWeek } = req.body;
-
-        if (!specialtyName || !dayOfWeek) {
-            return res.status(400).json({ message: 'specialtyName and dayOfWeek are required in the body.' });
-        }
-
-       
-        const specialty = await Specialty.findOne({ name: specialtyName.trim() });
-        if (!specialty) {
-            return res.status(404).json({ message: `Specialty '${specialtyName}' not found.` });
-        }
-
-        
-        const now = new Date();
-        const hours = now.getHours().toString().padStart(2, '0');
-        const minutes = now.getMinutes().toString().padStart(2, '0');
-        const currentTime = `${hours}:${minutes}`;
-
-        const doctors = await Doctor.find({
-            specialty: specialty._id,
-            schedule: {
-                $elemMatch: {
-                    dayOfWeek,
-                    isAvailable: true,
-                    startTime: { $lte: currentTime },
-                    endTime: { $gte: currentTime }
-                }
-            }
-        }).populate('userId', 'name email');
-
-        res.status(200).json({ doctors });
-    } catch (error) {
-        console.error('Fetch Doctors Error:', error);
-        res.status(500).json({ message: 'Server error.' });
+  try {
+    const { specialtyName, dayOfWeek } = req.body;
+    if (!specialtyName || !dayOfWeek) {
+      return res.status(400).json({ message: 'specialtyName and dayOfWeek are required in the body.' });
     }
+
+    const specialty = await Specialty.findOne({ name: specialtyName.trim() });
+    if (!specialty) {
+      return res.status(404).json({ message: `Specialty '${specialtyName}' not found.` });
+    }
+
+    const doctors = await Doctor.find({
+      specialty: specialty._id,
+      schedule: {
+        $elemMatch: {
+          dayOfWeek,
+          isAvailable: true,
+        },
+      },
+    }).populate('userId', 'name email');
+
+    res.status(200).json({ doctors });
+  } catch (error) {
+    console.error('Fetch Doctors Error:', error);
+    res.status(500).json({ message: 'Server error.' });
+  }
 };
 
 
@@ -179,18 +170,21 @@ const createVisitHandler = async (req, res) => {
             patientDbId: patient._id,    
             visitType,
             referredBy: referralPartnerId,
-            assignedDoctorId: doctor._id,
+           assignedDoctorId:  doctor.userId,
+
             payment: visitType === 'OPD' ? payment : undefined
         });
 
         await newVisit.save();
-
-        io.to(`doctor_${newVisit.assignedDoctorId}`).emit('newAssignedPatient', {
+console.log('Saved Visit:', newVisit);
+       getIO().to(`doctor_${newVisit.assignedDoctorId}`).emit('newAssignedPatient', {
             visitId: newVisit._id,
             patientId: newVisit.patientId,
-            visitType: newVisit.visitType
+            visitType: newVisit.visitType,
+              
+       
         });
-
+console.log(`Emitting newAssignedPatient event to doctor_${newVisit.assignedDoctorId}`)
     
         res.status(201).json({ message: 'Visit created successfully.', visit: newVisit });
     } catch (error) {
@@ -205,6 +199,7 @@ const getVisitsByPatientHandler = async (req, res) => {
 
         const visits = await Visit.find({ patientId: patientId })
             .sort({ visitDate: -1 })
+          
             .populate({
                 path: 'assignedDoctorId',
                 populate: { path: 'userId', select: 'name email' }
@@ -228,22 +223,19 @@ const updateVisitStatusHandler = async (req, res) => {
 
         const allowedStatuses = ['Waiting', 'Declined', 'Completed'];
 
-       
         if (!newStatus || !allowedStatuses.includes(newStatus)) {
             return res.status(400).json({ message: `Invalid status. Allowed statuses: ${allowedStatuses.join(', ')}` });
         }
 
-    
         if (newStatus === 'Declined' && (!declineReason || declineReason.trim() === '')) {
             return res.status(400).json({ message: 'declineReason is required when visit is declined.' });
         }
-   
+
         const visit = await Visit.findById(id);
         if (!visit) {
             return res.status(404).json({ message: 'Visit not found.' });
         }
 
-  
         visit.status = newStatus;
 
         if (newStatus === 'Declined') {
@@ -252,7 +244,19 @@ const updateVisitStatusHandler = async (req, res) => {
             visit.declineReason = undefined;
         }
 
+       
+  
+
+
+
         await visit.save();
+        if (newStatus === 'Waiting') {
+  getIO().to(`doctor_${visit.assignedDoctorId}`).emit('newAssignedPatient', {
+    doctorId: visit.assignedDoctorId,
+    visitId: visit._id,
+    patientName: visit.patientDbId?.fullName || 'New patient',
+  });
+}
 
         res.status(200).json({ message: 'Visit status updated successfully.', visit });
     } catch (error) {
@@ -260,6 +264,7 @@ const updateVisitStatusHandler = async (req, res) => {
         res.status(500).json({ message: 'Server error.' });
     }
 };
+
 
 
 module.exports = {registerPatientHandler,getAllPatientsHandler,getPatientByIdHandler,createVisitHandler,getVisitsByPatientHandler
