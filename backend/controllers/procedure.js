@@ -3,22 +3,37 @@ const AnesthesiaRecord = require('../models/AnesthesiaRecord');
 const LabourRoomDetail = require('../models/LabourRoomDetail');
 
 exports.scheduleProcedure = async (req, res) => {
-     console.log('Received body for anesthesia record:', req.body);
+     console.log('Received body for procedure:', req.body);
     try {
         const {
-            patientId, ipdAdmissionId, procedureType, roomId, scheduledDateTime,
+     
+            patientId, ipdAdmissionId, procedureType, roomId,  labourRoomId, scheduledDateTime,
             procedureId, surgeonId, assistantIds, anestheticId
         } = req.body;
 
-        if (!patientId || !procedureType || !roomId || !scheduledDateTime || !procedureId || !surgeonId) {
+        if (!patientId || !procedureType || !scheduledDateTime || !procedureId || !surgeonId) {
             return res.status(400).json({ message: 'Missing required fields.' });
         }
+        if (procedureType === 'OT' && !roomId) {
+    return res.status(400).json({ message: 'OT Room is required for OT procedure.' });
+}
+if (procedureType === 'Labour Room' && !labourRoomId) {
+    return res.status(400).json({ message: 'Labour Room is required for Labour Room procedure.' });
+}
+          const normalizedType = procedureType?.trim()?.toLowerCase();
+
+// Convert to proper enum value
+let finalProcedureType;
+if (normalizedType === 'ot') finalProcedureType = 'OT';
+else if (normalizedType === 'labour room') finalProcedureType = 'Labour Room';
+else finalProcedureType = procedureType;
 
         const procedure = new ProcedureSchedule({
             patientId,
             ipdAdmissionId,
-            procedureType,
-            roomId,
+             procedureType: finalProcedureType,
+ roomId: normalizedType === 'ot' ? roomId : undefined,
+  labourRoomId: normalizedType === 'labour room' ? labourRoomId : undefined,
             scheduledDateTime,
             procedureId,
             surgeonId,
@@ -35,11 +50,21 @@ exports.scheduleProcedure = async (req, res) => {
     }
 };
 
+
+
 exports.getSchedulesByPatient = async (req, res) => {
     try {
         const { patientId } = req.params;
         const procedures = await ProcedureSchedule.find({ patientId })
-            .populate('procedureId surgeonId anestheticId roomId assistantIds');
+             .populate([
+    { path: 'procedureId' },
+    { path: 'surgeonId', populate: { path: 'userId', select: 'name email' } },
+    { path: 'anestheticId', populate: { path: 'userId', select: 'name email' } },
+     { path: 'roomId', select: 'name' },
+    { path: 'labourRoomId', select: 'name' },
+    { path: 'assistantIds', populate: { path: 'userId', select: 'name' } }
+  ]);
+
 
         res.status(200).json({ procedures });
     } catch (error) {
@@ -101,7 +126,13 @@ exports.createAnesthesiaRecord = async (req, res) => {
 exports.getAnesthesiaRecord = async (req, res) => {
     try {
         const { procedureScheduleId } = req.params;
-        const record = await AnesthesiaRecord.findOne({ procedureScheduleId }).populate('anestheticId');
+        const record = await AnesthesiaRecord.findOne({ procedureScheduleId }).populate({
+    path: 'anestheticId',
+    populate: {
+      path: 'userId',
+      select: 'name' // or 'name email' if needed
+    }
+})
 
         if (!record) return res.status(404).json({ message: 'No record found.' });
         res.status(200).json({ record });

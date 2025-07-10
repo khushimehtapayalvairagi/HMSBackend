@@ -6,7 +6,6 @@ const Ward = require('../models/Ward');
 const Patient = require('../models/Patient');
 const Visit = require('../models/Visit');
 const Doctor = require('../models/Doctor');
-const RoomCategory = require('../models/Room'); // adjust path as needed
 
 
 exports.createIPDAdmission = async (req, res) => {
@@ -17,6 +16,10 @@ exports.createIPDAdmission = async (req, res) => {
         if (!patientId || !visitId || !wardId || !bedNumber || !roomCategoryId || !admittingDoctorId) {
             return res.status(400).json({ message: 'All fields are required.' });
         }
+          const existingAdmission = await IPDAdmission.findOne({ patientId, status: 'Admitted' });
+    if (existingAdmission) {
+      return res.status(400).json({ message: 'Patient is already admitted and cannot be admitted again.' });
+    }
 
         const [patient, visit, doctor, ward] = await Promise.all([
             Patient.findById(patientId),
@@ -77,7 +80,11 @@ exports.getIPDAdmissionsByPatient = async (req, res) => {
   try {
     const { patientId } = req.params;
     console.log("Requesting admissions for patientId:", patientId);
-    const admissions = await IPDAdmission.find({ patientId })
+    const admissions = await IPDAdmission.find({
+        patientId,
+        
+     })
+     .populate('patientId')
       .populate('visitId wardId roomCategoryId admittingDoctorId');
     console.log("Admissions result:", admissions);
     res.status(200).json({ admissions });
@@ -106,7 +113,9 @@ exports.dischargeIPDAdmission = async (req, res) => {
 
         admission.status = 'Discharged';
         admission.actualDischargeDate = new Date();
+
         await admission.save();
+        console.log('✅ After save:', admission.status);
 
         await Patient.findByIdAndUpdate(admission.patientId, { status: 'Discharged' });
 

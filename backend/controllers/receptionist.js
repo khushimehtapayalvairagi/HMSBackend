@@ -206,8 +206,8 @@ const getVisitsByPatientHandler = async (req, res) => {
             .populate({
                 path: 'referredBy',
                 select: 'name contact_person contact_number' 
-            });
-
+            })
+           
         res.status(200).json({ visits });
     } catch (error) {
         console.error('Fetch Visits Error:', error);
