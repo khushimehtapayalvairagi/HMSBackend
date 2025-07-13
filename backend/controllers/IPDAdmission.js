@@ -1,15 +1,15 @@
 const mongoose = require('mongoose');
-
 const IPDAdmission = require('../models/IPDAdmission');
 const DailyProgressReport = require('../models/DailyProgressReport');
 const Ward = require('../models/Ward');
 const Patient = require('../models/Patient');
 const Visit = require('../models/Visit');
 const Doctor = require('../models/Doctor');
+const RoomCategory = require('../models/Room'); 
+
 
 
 exports.createIPDAdmission = async (req, res) => {
-   console.log('📥 IPDAdmission payload:', req.body);
     try {
         const { patientId, visitId, wardId, bedNumber, roomCategoryId, admittingDoctorId, expectedDischargeDate } = req.body;
 
@@ -24,23 +24,10 @@ exports.createIPDAdmission = async (req, res) => {
         const [patient, visit, doctor, ward] = await Promise.all([
             Patient.findById(patientId),
             Visit.findById(visitId),
-          Doctor.findOne({ userId: admittingDoctorId }),
-
-            
+            Doctor.findById(admittingDoctorId),
             Ward.findById(wardId)
         ]);
-
   
-
-   
- 
-
-    console.log({
-      patientExists: !!patient,
-      visitExists: !!visit,
-      doctorExists: !!doctor,
-      wardExists: !!ward
-    });
         if (!patient || !visit || !doctor || !ward) {
             return res.status(404).json({ message: 'Invalid reference: patient, visit, doctor, or ward not found.' });
         }
@@ -79,19 +66,29 @@ exports.createIPDAdmission = async (req, res) => {
 exports.getIPDAdmissionsByPatient = async (req, res) => {
   try {
     const { patientId } = req.params;
-    console.log("Requesting admissions for patientId:", patientId);
     const admissions = await IPDAdmission.find({
-        patientId,
-        
+        patientId,   
      })
      .populate('patientId')
+
+    const admissions = await IPDAdmission.find({ patientId })
       .populate('visitId wardId roomCategoryId admittingDoctorId');
-    console.log("Admissions result:", admissions);
     res.status(200).json({ admissions });
   } catch (error) {
     console.error("Error fetching admissions:", error);
     res.status(500).json({ message: 'Server error.' });
   }
+};
+
+    try {
+        const { patientId } = req.params;
+        const admissions = await IPDAdmission.find({ patientId })
+            .populate('visitId wardId roomCategoryId admittingDoctorId');
+
+        res.status(200).json({ admissions });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error.' });
+    }
 };
 
 

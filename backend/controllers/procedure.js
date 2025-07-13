@@ -3,7 +3,6 @@ const AnesthesiaRecord = require('../models/AnesthesiaRecord');
 const LabourRoomDetail = require('../models/LabourRoomDetail');
 
 exports.scheduleProcedure = async (req, res) => {
-     console.log('Received body for procedure:', req.body);
     try {
         const {
      
@@ -97,8 +96,6 @@ exports.updateProcedureStatus = async (req, res) => {
 
 
 exports.createAnesthesiaRecord = async (req, res) => {
-  console.log('Received body for anesthesia record:', req.body);
-
     try {
         const {
             procedureScheduleId, anestheticId, anesthesiaName,
@@ -143,8 +140,6 @@ exports.getAnesthesiaRecord = async (req, res) => {
 };
 
 exports.createLabourRoomDetail = async (req, res) => {
-     console.log('Received body for anesthesia record:', req.body);
-   
     try {
         const {
             procedureScheduleId, patientId, babyName, gender,
