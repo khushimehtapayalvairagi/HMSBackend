@@ -17,9 +17,10 @@ setupSocket(server);
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({
-    origin: 'http://localhost:5174',
+    origin: 'http://localhost:3000',
     credentials: true
 }));
+
 
 
 const AuthHandler = require('./routes/auth');
@@ -29,17 +30,24 @@ const doctorHandler = require('./routes/doctor');
 const ipdHandler = require('./routes/ipd');
 const procedure = require('./routes/procedure');
 
-
+// Database Connect
 connectDB(process.env.DATABASE_URL);
+
 
 server.listen(PORT, () => {
     console.log(`Server is listening at PORT: ${PORT}`);
 });
 
-
 app.use('/api/auth', AuthHandler);
 app.use('/api/admin', restrictToLoggedInUserOnly, restrictTo(['ADMIN']), AdminHandler);
-app.use('/api/receptionist', restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'RECEPTIONIST']), ReceptionistHandler);
+app.use('/api/receptionist', restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'RECEPTIONIST','STAFF']), ReceptionistHandler);
 app.use('/api/doctor', restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'DOCTOR']), doctorHandler);
+<<<<<<< HEAD
 app.use('/api/ipd', restrictToLoggedInUserOnly,restrictTo(['ADMIN','RECEPTIONIST','DOCTOR','NURSE']), ipdHandler);
 app.use('/api/procedures', restrictToLoggedInUserOnly,restrictTo(['ADMIN','RECEPTIONIST','DOCTOR','NURSE']), procedure);
+=======
+app.use('/api/ipd', restrictToLoggedInUserOnly,restrictTo(['ADMIN','RECEPTIONIST','DOCTOR','STAFF']), ipdHandler);
+app.use('/api/procedures', restrictToLoggedInUserOnly,restrictTo(['ADMIN','RECEPTIONIST','DOCTOR','STAFF']), procedure);
+
+
+>>>>>>> fe3898f8f9fde1b8450b0db8590522b6520540b4

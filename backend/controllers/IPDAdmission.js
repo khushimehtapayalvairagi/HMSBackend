@@ -1,9 +1,12 @@
+const mongoose = require('mongoose');
 const IPDAdmission = require('../models/IPDAdmission');
 const DailyProgressReport = require('../models/DailyProgressReport');
 const Ward = require('../models/Ward');
 const Patient = require('../models/Patient');
 const Visit = require('../models/Visit');
 const Doctor = require('../models/Doctor');
+
+
 
 exports.createIPDAdmission = async (req, res) => {
     try {
@@ -12,6 +15,10 @@ exports.createIPDAdmission = async (req, res) => {
         if (!patientId || !visitId || !wardId || !bedNumber || !roomCategoryId || !admittingDoctorId) {
             return res.status(400).json({ message: 'All fields are required.' });
         }
+          const existingAdmission = await IPDAdmission.findOne({ patientId, status: 'Admitted' });
+    if (existingAdmission) {
+      return res.status(400).json({ message: 'Patient is already admitted and cannot be admitted again.' });
+    }
 
         const [patient, visit, doctor, ward] = await Promise.all([
             Patient.findById(patientId),
@@ -19,7 +26,7 @@ exports.createIPDAdmission = async (req, res) => {
             Doctor.findById(admittingDoctorId),
             Ward.findById(wardId)
         ]);
-
+  
         if (!patient || !visit || !doctor || !ward) {
             return res.status(404).json({ message: 'Invalid reference: patient, visit, doctor, or ward not found.' });
         }
@@ -60,12 +67,12 @@ exports.getIPDAdmissionsByPatient = async (req, res) => {
         const { patientId } = req.params;
         const admissions = await IPDAdmission.find({ patientId })
             .populate('visitId wardId roomCategoryId admittingDoctorId');
-
         res.status(200).json({ admissions });
     } catch (error) {
         res.status(500).json({ message: 'Server error.' });
     }
 };
+
 
 exports.dischargeIPDAdmission = async (req, res) => {
     try {
@@ -85,7 +92,9 @@ exports.dischargeIPDAdmission = async (req, res) => {
         
         admission.status = 'Discharged';
         admission.actualDischargeDate = new Date();
+
         await admission.save();
+        console.log('✅ After save:', admission.status);
 
         await Patient.findByIdAndUpdate(admission.patientId, { status: 'Discharged' });
 

@@ -1,17 +1,22 @@
 const express = require("express");
 const {registerPatientHandler,getAllPatientsHandler,getPatientByIdHandler,createVisitHandler,getVisitsByPatientHandler
         ,updateVisitStatusHandler,getAvailableDoctorsHandler}= require("../controllers/receptionist")
-const router = express.Router();
+const{getAllSpecialtiesHandler, getAllProceduresHandler,getAllWardsHandler,getAllOperationTheatersHandler,getAllRoomCategoriesHandler,getAllReferralPartnersHandler, getAllDoctorsHandler,getAllLabourRoomsHandler} = require("../controllers/admin")
+        const router = express.Router();
 
 router.post('/patients', registerPatientHandler);
 router.get('/patients', getAllPatientsHandler);
 router.get('/patients/:id', getPatientByIdHandler);
-
+router.get('/specialties', getAllSpecialtiesHandler);
 router.post('/doctors', getAvailableDoctorsHandler);
 router.post('/visits',  createVisitHandler);
 router.get('/visits/:patientId',  getVisitsByPatientHandler);
-
+router.get('/wards', getAllWardsHandler);
+router.get('/room-categories', getAllRoomCategoriesHandler);
 router.put('/visits/status/:id', updateVisitStatusHandler);
-
-
+router.get('/doctors', getAllDoctorsHandler);
+router.get('/referral-partners', getAllReferralPartnersHandler);
+router.get('/operation-theaters', getAllOperationTheatersHandler);
+router.get('/procedures', getAllProceduresHandler);
+router.get('/labour-rooms', getAllLabourRoomsHandler);
 module.exports = router;
