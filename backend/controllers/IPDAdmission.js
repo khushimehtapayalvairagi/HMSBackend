@@ -82,7 +82,7 @@ exports.dischargeIPDAdmission = async (req, res) => {
                 await ward.save();
             }
         }
-
+        
         admission.status = 'Discharged';
         admission.actualDischargeDate = new Date();
         await admission.save();
