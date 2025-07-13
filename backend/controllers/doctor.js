@@ -58,7 +58,7 @@ const createOPDConsultationHandler = async (req, res) => {
         getIO().to('receptionist_room').emit('newIPDAdmissionAdvice', {
             patientId: consultation.patientId,
             visitId: consultation.visitId,
-          admittingDoctorId: visit.assignedDoctorId ,
+            admittingDoctorId: doctorId,
 
             doctorId: consultation.doctorId,
             chiefComplaint: consultation.chiefComplaint
