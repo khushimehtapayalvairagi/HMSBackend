@@ -34,6 +34,7 @@ exports.createBill = async (req, res) => {
           desc = m.itemName;
         }
       } else {
+        if (!it.unit_price || it.unit_price <= 0) return res.status(400).json({ message: 'Unit price must be greater than zero for manual charges.' });
         unit_price = it.unit_price;
         desc = description || 'Custom charge';
       }
