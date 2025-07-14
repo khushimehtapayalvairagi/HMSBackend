@@ -1,6 +1,6 @@
 const express = require("express");
 const {registerPatientHandler,getAllPatientsHandler,getPatientByIdHandler,createVisitHandler,getVisitsByPatientHandler
-        ,updateVisitStatusHandler,getAvailableDoctorsHandler}= require("../controllers/receptionist")
+        ,updateVisitStatusHandler,getAvailableDoctorsHandler,getActivePatientsHandler,getUnbilledProceduresForPatientHandler}= require("../controllers/receptionist")
 const{getAllSpecialtiesHandler, getAllProceduresHandler,getAllWardsHandler,getAllOperationTheatersHandler,getAllRoomCategoriesHandler,getAllReferralPartnersHandler, getAllDoctorsHandler,getAllLabourRoomsHandler} = require("../controllers/admin")
         const router = express.Router();
 
@@ -19,4 +19,8 @@ router.get('/referral-partners', getAllReferralPartnersHandler);
 router.get('/operation-theaters', getAllOperationTheatersHandler);
 router.get('/procedures', getAllProceduresHandler);
 router.get('/labour-rooms', getAllLabourRoomsHandler);
+router.get('/patients/active', getActivePatientsHandler);
+router.get('/procedures/unbilled/:patientId', getUnbilledProceduresForPatientHandler);
+
+
 module.exports = router;

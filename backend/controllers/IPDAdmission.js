@@ -5,6 +5,7 @@ const Ward = require('../models/Ward');
 const Patient = require('../models/Patient');
 const Visit = require('../models/Visit');
 const Doctor = require('../models/Doctor');
+const Bill = require('../models/Bill');
 
 
 
@@ -74,35 +75,46 @@ exports.getIPDAdmissionsByPatient = async (req, res) => {
 };
 
 
+
+
 exports.dischargeIPDAdmission = async (req, res) => {
-    try {
-        const { id } = req.params;
+  try {
+    const { id } = req.params;
 
-        const admission = await IPDAdmission.findById(id);
-        if (!admission) return res.status(404).json({ message: 'Admission not found.' });
+    const admission = await IPDAdmission.findById(id);
+    if (!admission) return res.status(404).json({ message: 'Admission not found.' });
 
-        const ward = await Ward.findById(admission.wardId);
-        if (ward) {
-            const bed = ward.beds.find(b => b.bedNumber === admission.bedNumber);
-            if (bed) {
-                bed.status = 'available';
-                await ward.save();
-            }
-        }
-        
-        admission.status = 'Discharged';
-        admission.actualDischargeDate = new Date();
-
-        await admission.save();
-        console.log('✅ After save:', admission.status);
-
-        await Patient.findByIdAndUpdate(admission.patientId, { status: 'Discharged' });
-
-        res.status(200).json({ message: 'Patient discharged successfully.' });
-    } catch (error) {
-        res.status(500).json({ message: 'Server error.' });
+    const unpaidBills = await Bill.find({
+      ipd_admission_id_ref: admission._id,
+      payment_status: { $ne: 'Paid' }
+    });
+    
+    if (unpaidBills.length > 0) {
+      return res.status(400).json({ message: 'Cannot discharge patient: unpaid bills exist.' });
     }
+
+    const ward = await Ward.findById(admission.wardId);
+    if (ward) {
+      const bed = ward.beds.find(b => b.bedNumber === admission.bedNumber);
+      if (bed) {
+        bed.status = 'available';
+        await ward.save();
+      }
+    }
+
+    admission.status = 'Discharged';
+    admission.actualDischargeDate = new Date();
+    await admission.save();
+
+    await Patient.findByIdAndUpdate(admission.patientId, { status: 'Discharged' });
+
+    res.status(200).json({ message: 'Patient discharged successfully.' });
+  } catch (error) {
+    console.error('Discharge Error:', error);
+    res.status(500).json({ message: 'Server error.' });
+  }
 };
+
 
 exports.createDailyProgressReport = async (req, res) => {
     try {

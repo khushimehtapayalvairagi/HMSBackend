@@ -21,7 +21,6 @@ if (procedureType === 'Labour Room' && !labourRoomId) {
 }
           const normalizedType = procedureType?.trim()?.toLowerCase();
 
-// Convert to proper enum value
 let finalProcedureType;
 if (normalizedType === 'ot') finalProcedureType = 'OT';
 else if (normalizedType === 'labour room') finalProcedureType = 'Labour Room';
@@ -127,7 +126,7 @@ exports.getAnesthesiaRecord = async (req, res) => {
     path: 'anestheticId',
     populate: {
       path: 'userId',
-      select: 'name' // or 'name email' if needed
+      select: 'name'
     }
 })
 
