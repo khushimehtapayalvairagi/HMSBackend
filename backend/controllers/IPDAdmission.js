@@ -6,10 +6,14 @@ const Ward = require('../models/Ward');
 const Patient = require('../models/Patient');
 const Visit = require('../models/Visit');
 const Doctor = require('../models/Doctor');
+const Bill = require('../models/Bill');
+
 
 
 exports.createIPDAdmission = async (req, res) => {
+
    console.log('📥 IPDAdmission payload:', req.body);
+
     try {
         const { patientId, visitId, wardId, bedNumber, roomCategoryId, admittingDoctorId, expectedDischargeDate } = req.body;
 
@@ -24,6 +28,7 @@ exports.createIPDAdmission = async (req, res) => {
         const [patient, visit, doctor, ward] = await Promise.all([
             Patient.findById(patientId),
             Visit.findById(visitId),
+
           Doctor.findOne({ userId: admittingDoctorId }),
 
             
@@ -41,6 +46,8 @@ exports.createIPDAdmission = async (req, res) => {
       doctorExists: !!doctor,
       wardExists: !!ward
     });
+
+
         if (!patient || !visit || !doctor || !ward) {
             return res.status(404).json({ message: 'Invalid reference: patient, visit, doctor, or ward not found.' });
         }
@@ -77,53 +84,93 @@ exports.createIPDAdmission = async (req, res) => {
 };
 
 exports.getIPDAdmissionsByPatient = async (req, res) => {
+
+    try {
+        const { patientId } = req.params;
+        const admissions = await IPDAdmission.find({ patientId })
+        .populate('patientId', 'fullName')
+        .populate('visitId')  
+            .populate( 'wardId roomCategoryId admittingDoctorId');
+        res.status(200).json({ admissions });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error.' });
+    }
+};
+
+
+
+
+exports.dischargeIPDAdmission = async (req, res) => {
+
   try {
-    const { patientId } = req.params;
-    console.log("Requesting admissions for patientId:", patientId);
-    const admissions = await IPDAdmission.find({
-        patientId,
-        
-     })
-     .populate('patientId')
-      .populate('visitId wardId roomCategoryId admittingDoctorId');
-    console.log("Admissions result:", admissions);
-    res.status(200).json({ admissions });
+    const { id } = req.params;
+
+    const admission = await IPDAdmission.findById(id);
+    if (!admission) return res.status(404).json({ message: 'Admission not found.' });
+
+    const unpaidBills = await Bill.find({
+      ipd_admission_id_ref: admission._id,
+      payment_status: { $ne: 'Paid' }
+    });
+    
+    if (unpaidBills.length > 0) {
+      return res.status(400).json({ message: 'Cannot discharge patient: unpaid bills exist.' });
+    }
+
+    const ward = await Ward.findById(admission.wardId);
+    if (ward) {
+      const bed = ward.beds.find(b => b.bedNumber === admission.bedNumber);
+      if (bed) {
+        bed.status = 'available';
+        await ward.save();
+      }
+    }
+
+    admission.status = 'Discharged';
+    admission.actualDischargeDate = new Date();
+    await admission.save();
+
+    await Patient.findByIdAndUpdate(admission.patientId, { status: 'Discharged' });
+
+    res.status(200).json({ message: 'Patient discharged successfully.' });
   } catch (error) {
-    console.error("Error fetching admissions:", error);
+    console.error('Discharge Error:', error);
     res.status(500).json({ message: 'Server error.' });
   }
 };
 
 
-exports.dischargeIPDAdmission = async (req, res) => {
-    try {
-        const { id } = req.params;
 
-        const admission = await IPDAdmission.findById(id);
-        if (!admission) return res.status(404).json({ message: 'Admission not found.' });
+// exports.dischargeIPDAdmission = async (req, res) => {
+//     try {
+//         const { id } = req.params;
 
-        const ward = await Ward.findById(admission.wardId);
-        if (ward) {
-            const bed = ward.beds.find(b => b.bedNumber === admission.bedNumber);
-            if (bed) {
-                bed.status = 'available';
-                await ward.save();
-            }
-        }
+//         const admission = await IPDAdmission.findById(id);
+//         if (!admission) return res.status(404).json({ message: 'Admission not found.' });
 
-        admission.status = 'Discharged';
-        admission.actualDischargeDate = new Date();
+//         const ward = await Ward.findById(admission.wardId);
+//         if (ward) {
+//             const bed = ward.beds.find(b => b.bedNumber === admission.bedNumber);
+//             if (bed) {
+//                 bed.status = 'available';
+//                 await ward.save();
+//             }
+//         }
 
-        await admission.save();
-        console.log('✅ After save:', admission.status);
+//         admission.status = 'Discharged';
+//         admission.actualDischargeDate = new Date();
 
-        await Patient.findByIdAndUpdate(admission.patientId, { status: 'Discharged' });
+//         await admission.save();
+//         console.log('✅ After save:', admission.status);
 
-        res.status(200).json({ message: 'Patient discharged successfully.' });
-    } catch (error) {
-        res.status(500).json({ message: 'Server error.' });
-    }
-};
+//         await Patient.findByIdAndUpdate(admission.patientId, { status: 'Discharged' });
+
+//         res.status(200).json({ message: 'Patient discharged successfully.' });
+//     } catch (error) {
+//         res.status(500).json({ message: 'Server error.' });
+//     }
+// };
+
 
 exports.createDailyProgressReport = async (req, res) => {
     try {

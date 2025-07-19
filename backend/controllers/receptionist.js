@@ -3,6 +3,7 @@ const Visit = require('../models/Visit');
 const ReferralPartner = require('../models/ReferralPartner');
 const Doctor = require('../models/Doctor');
 const Specialty = require('../models/Specialty')
+const ProcedureSchedule = require('../models/ProcedureSchedule');
 
 const {  getIO } = require('../utils/sockets');
 
@@ -264,7 +265,43 @@ const updateVisitStatusHandler = async (req, res) => {
     }
 };
 
+const getActivePatientsHandler = async (req, res) => {
+  try {
+    const activePatients = await Patient.find({ status: 'Active' })
+      .sort({ updatedAt: -1 })
+      .select('fullName contactNumber email status');
+
+    res.status(200).json({ patients: activePatients });
+  } catch (error) {
+    console.error('Get Active Patients Error:', error);
+    res.status(500).json({ message: 'Server error.' });
+  }
+};
+
+
+
+const getUnbilledProceduresForPatientHandler = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+
+    if (!patientId) {
+      return res.status(400).json({ message: 'Patient ID is required.' });
+    }
+
+    const schedules = await ProcedureSchedule.find({
+      patientId,
+      isBilled: false
+    }).populate('procedureId surgeonId');
+
+    res.status(200).json({ unbilledProcedures: schedules });
+  } catch (error) {
+    console.error('Fetch Unbilled Procedures Error:', error);
+    res.status(500).json({ message: 'Server error.' });
+  }
+};
+
+
 
 
 module.exports = {registerPatientHandler,getAllPatientsHandler,getPatientByIdHandler,createVisitHandler,getVisitsByPatientHandler
-                ,updateVisitStatusHandler,getAvailableDoctorsHandler}
+                ,updateVisitStatusHandler,getAvailableDoctorsHandler,getActivePatientsHandler,getUnbilledProceduresForPatientHandler}

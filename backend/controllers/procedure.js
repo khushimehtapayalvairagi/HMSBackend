@@ -3,7 +3,7 @@ const AnesthesiaRecord = require('../models/AnesthesiaRecord');
 const LabourRoomDetail = require('../models/LabourRoomDetail');
 
 exports.scheduleProcedure = async (req, res) => {
-     console.log('Received body for procedure:', req.body);
+
     try {
         const {
      
@@ -22,7 +22,6 @@ if (procedureType === 'Labour Room' && !labourRoomId) {
 }
           const normalizedType = procedureType?.trim()?.toLowerCase();
 
-// Convert to proper enum value
 let finalProcedureType;
 if (normalizedType === 'ot') finalProcedureType = 'OT';
 else if (normalizedType === 'labour room') finalProcedureType = 'Labour Room';
@@ -53,6 +52,7 @@ else finalProcedureType = procedureType;
 
 
 exports.getSchedulesByPatient = async (req, res) => {
+  
     try {
         const { patientId } = req.params;
         const procedures = await ProcedureSchedule.find({ patientId })
@@ -97,7 +97,6 @@ exports.updateProcedureStatus = async (req, res) => {
 
 
 exports.createAnesthesiaRecord = async (req, res) => {
-  console.log('Received body for anesthesia record:', req.body);
 
     try {
         const {
@@ -130,7 +129,7 @@ exports.getAnesthesiaRecord = async (req, res) => {
     path: 'anestheticId',
     populate: {
       path: 'userId',
-      select: 'name' // or 'name email' if needed
+      select: 'name'
     }
 })
 
@@ -143,8 +142,7 @@ exports.getAnesthesiaRecord = async (req, res) => {
 };
 
 exports.createLabourRoomDetail = async (req, res) => {
-     console.log('Received body for anesthesia record:', req.body);
-   
+
     try {
         const {
             procedureScheduleId, patientId, babyName, gender,

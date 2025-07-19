@@ -30,8 +30,8 @@ const doctorHandler = require('./routes/doctor');
 const ipdHandler = require('./routes/ipd');
 const procedure = require('./routes/procedure');
 
-
-
+const inventoryManager = require('./routes/inventoryManager');
+const billingHandler = require('./routes/billing');
 
 
 
@@ -39,20 +39,21 @@ const procedure = require('./routes/procedure');
 connectDB(process.env.DATABASE_URL);
 
 
-
-
-
-
-
+server.listen(PORT, () => {
+    console.log(`Server is listening at PORT: ${PORT}`);
+});
 
 
 app.use('/api/auth', AuthHandler);
 app.use('/api/admin', restrictToLoggedInUserOnly, restrictTo(['ADMIN']), AdminHandler);
 app.use('/api/receptionist', restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'RECEPTIONIST','STAFF']), ReceptionistHandler);
 app.use('/api/doctor', restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'DOCTOR']), doctorHandler);
+
 app.use('/api/ipd', restrictToLoggedInUserOnly,restrictTo(['ADMIN','RECEPTIONIST','DOCTOR','STAFF']), ipdHandler);
 app.use('/api/procedures', restrictToLoggedInUserOnly,restrictTo(['ADMIN','RECEPTIONIST','DOCTOR','STAFF']), procedure);
 
-server.listen(PORT, () => {
-    console.log(`Server is listening at PORT: ${PORT}`);
-});
+
+
+app.use('/api/inventory', restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'INVENTORYMANAGER']), inventoryManager);
+app.use('/api/billing', restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'RECEPTIONIST', 'STAFF']), billingHandler);
+

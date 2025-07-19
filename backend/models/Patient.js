@@ -12,7 +12,7 @@ const PatientSchema = new mongoose.Schema({
     dob: { type: Date, required: true },
     gender: { type: String, enum: ['Male', 'Female', 'Other'], required: true },
     contactNumber: { type: String, required: true },
-    email: { type: String, required:true },
+    email: { type: String, required:true},
     address: { type: String, required: true },
     relatives: { type: [RelativeSchema], validate: [relativesLimit, '{PATH} exceeds the limit of 3'], required:true },
     status: { type: String, enum: ['Inactive','Active', ], default: 'Inactive' }
