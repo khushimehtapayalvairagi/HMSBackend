@@ -1,6 +1,7 @@
 const User = require('../models/User');
-const Doctor = require('../models/Doctor'); // ✅ make sure this is imported
+const Doctor = require('../models/Doctor'); 
 const bcrypt = require('bcrypt');
+const Staff = require('../models/Staff');
 const { setUser } = require("../utils/auth");
 
 const loginHandler = async (req, res) => {
@@ -17,9 +18,24 @@ const loginHandler = async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    const token = setUser(user);
+    let extraInfo = {};
 
- 
+    if (user.role === 'STAFF') {
+      const staffData = await Staff.findOne({ userId: user._id }).populate('department', 'name');
+      if (!staffData) {
+        return res.status(404).json({ message: 'Staff profile not found.' });
+      }
+
+      extraInfo = {
+        designation: staffData.designation,
+        contactNumber: staffData.contactNumber,
+        department: staffData.department ? staffData.department.name : null
+      };
+    }
+    
+    const token = setUser(user, {
+      designation: staffData?.designation || null
+    });
 
     res.status(200).json({
       message: 'Login successful',
@@ -29,14 +45,15 @@ const loginHandler = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        
-      
+        ...extraInfo
       }
     });
+
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 module.exports = loginHandler;

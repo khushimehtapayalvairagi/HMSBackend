@@ -5,7 +5,7 @@ const { connectDB } = require('./utils/config');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const { setupSocket } = require('./utils/sockets'); 
-const {restrictToLoggedInUserOnly,restrictTo} = require('./middlewares/auth')
+const { restrictToLoggedInUserOnly, restrictTo, restrictToDesignation } = require('./middlewares/auth');
 dotenv.config();
 
 const PORT = process.env.PORT || 8000;
@@ -30,7 +30,7 @@ const doctorHandler = require('./routes/doctor');
 const ipdHandler = require('./routes/ipd');
 const procedure = require('./routes/procedure');
 const inventoryManager = require('./routes/inventoryManager');
-
+const reports = require('./routes/reports');
 
 // Database Connect
 connectDB(process.env.DATABASE_URL);
@@ -42,10 +42,11 @@ server.listen(PORT, () => {
 
 
 app.use('/api/auth', AuthHandler);
-app.use('/api/admin', restrictToLoggedInUserOnly, restrictTo(['ADMIN']), AdminHandler);
-app.use('/api/receptionist', restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'RECEPTIONIST']), ReceptionistHandler);
-app.use('/api/doctor', restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'DOCTOR']), doctorHandler);
-app.use('/api/ipd', restrictToLoggedInUserOnly,restrictTo(['ADMIN','RECEPTIONIST','DOCTOR','NURSE']), ipdHandler);
-app.use('/api/procedures', restrictToLoggedInUserOnly,restrictTo(['ADMIN','RECEPTIONIST','DOCTOR','NURSE']), procedure);
-app.use('/api/inventory', restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'INVENTORYMANAGER']), inventoryManager);
+app.use('/api/admin',restrictToLoggedInUserOnly,restrictTo(['ADMIN']),AdminHandler);
+app.use('/api/receptionist',restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'STAFF']),restrictToDesignation(['Receptionist']),ReceptionistHandler);
+app.use('/api/doctor', restrictToLoggedInUserOnly,restrictTo(['ADMIN', 'DOCTOR']),doctorHandler);
+app.use('/api/ipd', restrictToLoggedInUserOnly,restrictTo(['ADMIN', 'DOCTOR', 'STAFF']), restrictToDesignation(['Receptionist', 'Head Nurse']),ipdHandler);
+app.use('/api/procedures',restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'DOCTOR', 'STAFF']), restrictToDesignation(['Receptionist', 'Head Nurse']),procedure);
+app.use('/api/inventory',restrictToLoggedInUserOnly,restrictTo(['ADMIN', 'STAFF']),restrictToDesignation(['Inventory Manager']),inventoryManager);
+app.use('/api/reports',restrictToLoggedInUserOnly, restrictTo(['ADMIN']),reports);
 

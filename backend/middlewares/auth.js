@@ -1,4 +1,6 @@
 const { getUser } = require("../utils/auth");
+const Staff = require('../models/Staff');
+
 
 async function restrictToLoggedInUserOnly(req,res,next){
     const userid = req.headers['authorization'];
@@ -36,6 +38,19 @@ function restrictTo(roles){
 }
 
 
+function restrictToDesignation(allowedDesignations = []) {
+  return function (req, res, next) {
+     if (req.user.role !== 'STAFF') {
+      return next();
+    }
+    
 
+    if (!req.user.designation || !allowedDesignations.includes(req.user.designation)) {
+      return res.status(403).json({ message: 'You do not have the required staff designation.' });
+    }
 
-module.exports = {restrictToLoggedInUserOnly,restrictTo};
+    next();
+  };
+}
+
+module.exports = { restrictToLoggedInUserOnly, restrictTo, restrictToDesignation };
