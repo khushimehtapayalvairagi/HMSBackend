@@ -15,7 +15,6 @@ const Payment = require('../models/Payment');
 
 
 
-
 exports.getCentralOPDRegister = async (req, res) => {
   try {
     const { startDate, endDate, doctorId, departmentId } = req.query;
