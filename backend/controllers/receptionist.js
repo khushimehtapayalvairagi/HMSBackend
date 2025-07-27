@@ -4,8 +4,6 @@ const ReferralPartner = require('../models/ReferralPartner');
 const Doctor = require('../models/Doctor');
 const Specialty = require('../models/Specialty')
 const ProcedureSchedule = require('../models/ProcedureSchedule');
-
-const Specialty = require('../models/Specialty');
 const {  getIO } = require('../utils/sockets');
 
 

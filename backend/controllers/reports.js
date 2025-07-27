@@ -2,14 +2,11 @@ const OPDConsultation = require('../models/OPDConsultation');
 const Doctor = require('../models/Doctor');
 const IPDAdmission = require('../models/IPDAdmission');
 const Patient = require('../models/Patient');
-const IPDAdmission = require('../models/IPDAdmission');
-const Doctor = require('../models/Doctor');
 const Department = require('../models/Department');
-const ProcedureSchedule = require('../models/ProcedureSchedule');
 const AnesthesiaRecord = require('../models/AnesthesiaRecord');
 const ProcedureSchedule = require('../models/ProcedureSchedule');
 const FumigationEntry = require('../models/FumigationEntry');
-const LabourRoomDetails = require('../models/LabourRoomDetails');
+const LabourRoomDetails = require('../models/LabourRoomDetail');
 const Bill = require('../models/Bill');
 const Payment = require('../models/Payment');
 
