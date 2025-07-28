@@ -4,14 +4,15 @@ dotenv.config();
 
 const secret = process.env.JWT_SECRET
 
-function setUser(user){
-
-    return jwt.sign({
-        _id:user._id,
-        email:user.email,
-        role:user.role,
-    },secret);
+function setUser(user, options = {}) {
+  return jwt.sign({
+    _id: user._id,
+    email: user.email,
+    role: user.role,
+    designation: options.designation || null 
+  }, secret);
 }
+
 
 function getUser(token){
     if(!token) return null;
