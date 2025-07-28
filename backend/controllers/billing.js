@@ -76,7 +76,15 @@ exports.getBillById = async (req, res) => {
   try {
     const bill = await Bill
       .findById(req.params.id)
-      .populate('patient_id_ref visit_id_ref ipd_admission_id_ref generated_by_user_id');
+     .populate({
+        path: 'patient_id_ref',
+        select: 'fullName' 
+      })
+      .populate({
+        path: 'generated_by_user_id',
+        select: 'name' 
+      })
+      .populate('patient_id_ref  ipd_admission_id_ref generated_by_user_id');
     if (!bill) return res.status(404).json({ message: 'Bill not found.' });
     res.json({ bill });
   } catch (err) {

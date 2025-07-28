@@ -20,6 +20,11 @@ exports.createInventoryItem = async (req, res) => {
         if (!supplierInfo || !supplierInfo.name || !supplierInfo.contact) {
             return res.status(400).json({ message: 'Supplier name and contact are required.' });
         }
+        const existing = await InventoryItem.findOne({ itemCode });
+if (existing) {
+  return res.status(400).json({ message: `Item code '${itemCode}' already exists.` });
+}
+
 
         const item = new InventoryItem({
             itemName,

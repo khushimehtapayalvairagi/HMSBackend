@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+
 const IPDAdmission = require('../models/IPDAdmission');
 const DailyProgressReport = require('../models/DailyProgressReport');
 const Ward = require('../models/Ward');
@@ -10,6 +11,9 @@ const Bill = require('../models/Bill');
 
 
 exports.createIPDAdmission = async (req, res) => {
+
+   console.log('📥 IPDAdmission payload:', req.body);
+
     try {
         const { patientId, visitId, wardId, bedNumber, roomCategoryId, admittingDoctorId, expectedDischargeDate } = req.body;
 
@@ -24,10 +28,26 @@ exports.createIPDAdmission = async (req, res) => {
         const [patient, visit, doctor, ward] = await Promise.all([
             Patient.findById(patientId),
             Visit.findById(visitId),
-            Doctor.findById(admittingDoctorId),
+
+          Doctor.findOne({ userId: admittingDoctorId }),
+
+            
             Ward.findById(wardId)
         ]);
+
   
+
+   
+ 
+
+    console.log({
+      patientExists: !!patient,
+      visitExists: !!visit,
+      doctorExists: !!doctor,
+      wardExists: !!ward
+    });
+
+
         if (!patient || !visit || !doctor || !ward) {
             return res.status(404).json({ message: 'Invalid reference: patient, visit, doctor, or ward not found.' });
         }
@@ -64,10 +84,13 @@ exports.createIPDAdmission = async (req, res) => {
 };
 
 exports.getIPDAdmissionsByPatient = async (req, res) => {
+
     try {
         const { patientId } = req.params;
         const admissions = await IPDAdmission.find({ patientId })
-            .populate('visitId wardId roomCategoryId admittingDoctorId');
+        .populate('patientId', 'fullName')
+        .populate('visitId')  
+            .populate( 'wardId roomCategoryId admittingDoctorId');
         res.status(200).json({ admissions });
     } catch (error) {
         res.status(500).json({ message: 'Server error.' });
@@ -78,6 +101,7 @@ exports.getIPDAdmissionsByPatient = async (req, res) => {
 
 
 exports.dischargeIPDAdmission = async (req, res) => {
+
   try {
     const { id } = req.params;
 
@@ -114,6 +138,38 @@ exports.dischargeIPDAdmission = async (req, res) => {
     res.status(500).json({ message: 'Server error.' });
   }
 };
+
+
+
+// exports.dischargeIPDAdmission = async (req, res) => {
+//     try {
+//         const { id } = req.params;
+
+//         const admission = await IPDAdmission.findById(id);
+//         if (!admission) return res.status(404).json({ message: 'Admission not found.' });
+
+//         const ward = await Ward.findById(admission.wardId);
+//         if (ward) {
+//             const bed = ward.beds.find(b => b.bedNumber === admission.bedNumber);
+//             if (bed) {
+//                 bed.status = 'available';
+//                 await ward.save();
+//             }
+//         }
+
+//         admission.status = 'Discharged';
+//         admission.actualDischargeDate = new Date();
+
+//         await admission.save();
+//         console.log('✅ After save:', admission.status);
+
+//         await Patient.findByIdAndUpdate(admission.patientId, { status: 'Discharged' });
+
+//         res.status(200).json({ message: 'Patient discharged successfully.' });
+//     } catch (error) {
+//         res.status(500).json({ message: 'Server error.' });
+//     }
+// };
 
 
 exports.createDailyProgressReport = async (req, res) => {

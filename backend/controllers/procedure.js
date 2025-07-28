@@ -3,6 +3,7 @@ const AnesthesiaRecord = require('../models/AnesthesiaRecord');
 const LabourRoomDetail = require('../models/LabourRoomDetail');
 
 exports.scheduleProcedure = async (req, res) => {
+
     try {
         const {
      
@@ -51,6 +52,7 @@ else finalProcedureType = procedureType;
 
 
 exports.getSchedulesByPatient = async (req, res) => {
+  
     try {
         const { patientId } = req.params;
         const procedures = await ProcedureSchedule.find({ patientId })
@@ -95,6 +97,7 @@ exports.updateProcedureStatus = async (req, res) => {
 
 
 exports.createAnesthesiaRecord = async (req, res) => {
+
     try {
         const {
             procedureScheduleId, anestheticId, anesthesiaName,
@@ -139,6 +142,7 @@ exports.getAnesthesiaRecord = async (req, res) => {
 };
 
 exports.createLabourRoomDetail = async (req, res) => {
+
     try {
         const {
             procedureScheduleId, patientId, babyName, gender,

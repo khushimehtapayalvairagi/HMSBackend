@@ -30,7 +30,9 @@ const doctorHandler = require('./routes/doctor');
 const ipdHandler = require('./routes/ipd');
 const procedure = require('./routes/procedure');
 const inventoryManager = require('./routes/inventoryManager');
+const billingHandler = require('./routes/billing');
 const reports = require('./routes/reports');
+
 
 // Database Connect
 connectDB(process.env.DATABASE_URL);

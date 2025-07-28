@@ -5,7 +5,9 @@ const ProcedureScheduleSchema = new mongoose.Schema({
     ipdAdmissionId: { type: mongoose.Schema.Types.ObjectId, ref: 'IPDAdmission' }, 
     procedureType: { type: String, enum: ['OT', 'Labour Room'], required: true },
     roomId: { type: mongoose.Schema.Types.ObjectId, ref: 'OperationTheater'},
-    labourRoomId: { type: mongoose.Schema.Types.ObjectId, ref: 'LabourRoom' },
+
+   labourRoomId: { type: mongoose.Schema.Types.ObjectId, ref: 'LabourRoom' },
+
     scheduledDateTime: { type: Date, required: true },
     procedureId: { type: mongoose.Schema.Types.ObjectId, ref: 'Procedure', required: true },
     surgeonId: { type: mongoose.Schema.Types.ObjectId, ref: 'Doctor', required: true },
