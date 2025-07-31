@@ -29,12 +29,13 @@ const ReceptionistHandler = require('./routes/receptionist');
 const doctorHandler = require('./routes/doctor');
 const ipdHandler = require('./routes/ipd');
 const procedure = require('./routes/procedure');
-
 const inventoryManager = require('./routes/inventoryManager');
 
+
+
+
+
 const billingHandler = require('./routes/billing');
-
-
 
 const reports = require('./routes/reports');
 
@@ -49,7 +50,9 @@ server.listen(PORT, () => {
 
 
 app.use('/api/auth', AuthHandler);
+
 app.use('/api/billing', restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'RECEPTIONIST', 'STAFF']), billingHandler);
+
 app.use('/api/admin',restrictToLoggedInUserOnly,restrictTo(['ADMIN']),AdminHandler);
 app.use('/api/receptionist',restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'STAFF']),restrictToDesignation(['Receptionist',"Head Nurse"]),ReceptionistHandler);
 app.use('/api/doctor', restrictToLoggedInUserOnly,restrictTo(['ADMIN', 'DOCTOR']),doctorHandler);

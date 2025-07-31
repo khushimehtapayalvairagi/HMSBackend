@@ -1,16 +1,18 @@
 const OPDConsultation = require('../models/OPDConsultation');
 const Doctor = require('../models/Doctor');
 const Patient = require('../models/Patient');
+
 const IPDAdmission = require('../models/IPDAdmission');
+
 const Department = require('../models/Department');
-const ProcedureSchedule = require('../models/ProcedureSchedule');
 const AnesthesiaRecord = require('../models/AnesthesiaRecord');
 const FumigationEntry = require('../models/FumigationEntry');
+
 const LabourRoomDetail = require('../models/LabourRoomDetail');
+
 const Bill = require('../models/Bill');
 const Payment = require('../models/Payment');
 const mongoose = require('mongoose');
-
 
 
 exports.getCentralOPDRegister = async (req, res) => {
