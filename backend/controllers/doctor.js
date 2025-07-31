@@ -1,6 +1,7 @@
 const OPDConsultation = require('../models/OPDConsultation');
 const Visit = require('../models/Visit');
 const Patient = require('../models/Patient');
+const Doctor = require('../models/Doctor');
 const {  getIO } = require('../utils/sockets');
 const mongoose = require('mongoose');
 
@@ -34,11 +35,15 @@ const createOPDConsultationHandler = async (req, res) => {
         const patient = await Patient.findById(patientId);
         if (!patient) return res.status(404).json({ message: 'Patient not found.' });
 
-    
+      const doctor = await Doctor.findOne({ userId: doctorId }).populate('userId', 'fullName');
+if (!doctor || !doctor.userId) {
+  return res.status(404).json({ message: "Doctor not found" });
+}
+
         const consultation = new OPDConsultation({
             visitId,
             patientId,
-            doctorId,
+               doctorId: doctor._id,
             chiefComplaint,
             diagnosis,
             doctorNotes,
@@ -52,13 +57,17 @@ const createOPDConsultationHandler = async (req, res) => {
         await consultation.save();
         visit.status = 'Completed';
         await visit.save();
+ const patientName = patient?.fullName || '';
+  
+
+        
 
         if (consultation.admissionAdvice === true) {
         getIO().to('receptionist_room').emit('newIPDAdmissionAdvice', {
             patientId: consultation.patientId,
+               patientName,
             visitId: consultation.visitId,
             admittingDoctorId: doctorId,
-
             doctorId: consultation.doctorId,
             chiefComplaint: consultation.chiefComplaint
         });
@@ -104,7 +113,7 @@ const getAssignedVisitsForDoctorHandler = async (req, res) => {
 
 
         const visits = await Visit.find({ 
-             assignedDoctorId: new mongoose.Types.ObjectId(doctorId) 
+             assignedDoctorUserId: new mongoose.Types.ObjectId(doctorId) 
             
         })
         .populate('patientDbId')

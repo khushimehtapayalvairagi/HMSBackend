@@ -170,23 +170,36 @@ const createVisitHandler = async (req, res) => {
             patientDbId: patient._id,    
             visitType,
             referredBy: referralPartnerId,
-           assignedDoctorId:  doctor.userId,
+         assignedDoctorId: doctor._id, // Actual Doctor ID for populate
+        assignedDoctorUserId: doctor.userId,
 
             payment: visitType === 'OPD' ? payment : undefined
         });
 
         await newVisit.save();
 console.log('Saved Visit:', newVisit);
-       getIO().to(`doctor_${newVisit.assignedDoctorId}`).emit('newAssignedPatient', {
-            visitId: newVisit._id,
-            patientId: newVisit.patientId,
-            visitType: newVisit.visitType,
+//        getIO().to(`doctor_${newVisit.assignedDoctorId}`).emit('newAssignedPatient', {
+//             visitId: newVisit._id,
+//             patientId: newVisit.patientId,
+//             visitType: newVisit.visitType,
               
        
-        });
-console.log(`Emitting newAssignedPatient event to doctor_${newVisit.assignedDoctorId}`)
+//         });
+// console.log(`Emitting newAssignedPatient event to doctor_${newVisit.assignedDoctorId}`)
     
-        res.status(201).json({ message: 'Visit created successfully.', visit: newVisit });
+     const populatedVisit = await Visit.findById(newVisit._id)
+
+       .populate('patientDbId', 'fullName')
+        .populate('assignedDoctorUserId', 'fullName');
+
+res.status(201).json({
+  message: 'Visit created successfully.',
+  visit: {
+    ...populatedVisit._doc,
+    patientName: populatedVisit?.patientDbId?.fullName || '',
+  doctorName: populatedVisit?.assignedDoctorUserId?.fullName || '',
+}
+});
     } catch (error) {
         console.error('Create Visit Error:', error);
         res.status(500).json({ message: 'Server error.' });
@@ -200,10 +213,16 @@ const getVisitsByPatientHandler = async (req, res) => {
         const visits = await Visit.find({ patientId: patientId })
             .sort({ visitDate: -1 })
           
-            .populate({
-                path: 'assignedDoctorId',
-                populate: { path: 'userId', select: 'name email' }
-            })
+           .populate({
+    path: 'assignedDoctorId',
+    model: 'Doctor',
+    populate: {
+      path: 'userId',
+      model: 'User',
+      select: 'name email'
+    }
+  })
+
             .populate({
                 path: 'referredBy',
                 select: 'name contact_person contact_number' 
@@ -251,8 +270,8 @@ const updateVisitStatusHandler = async (req, res) => {
 
         await visit.save();
         if (newStatus === 'Waiting') {
-  getIO().to(`doctor_${visit.assignedDoctorId}`).emit('newAssignedPatient', {
-    doctorId: visit.assignedDoctorId,
+  getIO().to(`doctor_${visit. assignedDoctorUserId}`).emit('newAssignedPatient', {
+    doctorId: visit. assignedDoctorUserId,
     visitId: visit._id,
     patientName: visit.patientDbId?.fullName || 'New patient',
   });

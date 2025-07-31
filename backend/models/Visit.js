@@ -7,7 +7,10 @@ const VisitSchema = new mongoose.Schema({
 
     visitType: { type: String, enum: ['OPD', 'IPD_Referral', 'IPD_Admission'], required: true },
 
-    assignedDoctorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Doctor', required: true },
+  assignedDoctorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Doctor' },
+assignedDoctorUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // for socket and frontend mapping
+
+
 
 
     visitDate: { type: Date, default: Date.now },

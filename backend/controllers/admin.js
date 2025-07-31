@@ -12,174 +12,156 @@ const Doctor = require('../models/Doctor');
 const Staff = require('../models/Staff');
 const ReferralPartner = require('../models/ReferralPartner');
 const OperationTheater = require('../models/OperationTheater');
-
 const bcrypt = require('bcrypt');
 
 
 const registerHandler = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const {
+      name,
+      email,
+      password,
+      role,
+      doctorType,
+      specialty,
+      medicalLicenseNumber,
+      schedule,
+      contactNumber,
+      designation,
+      department,
+    } = req.body;
+
+    const requesterRole = req.user.role;
+
+    
+    if (!name || !email || !password || !role) {
+      throw new Error('Name, email, password, and role are required.');
+    }
+
+    if (requesterRole !== 'ADMIN') {
+      throw new Error('Only Admin is allowed to register users.');
+    }
+    if (role === 'ADMIN') {
+      throw new Error('Admin cannot create another Admin.');
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      throw new Error('User with this email already exists.');
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const newUser = new User({
+      name,
+      email,
+      password: hashedPassword,
+      role,
+    });
+    await newUser.save({ session });
 
   
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    if (role.toUpperCase() === 'DOCTOR') {
+      if (!doctorType || !specialty || !medicalLicenseNumber) {
+        throw new Error('doctorType, specialty, and medicalLicenseNumber are required for Doctor.');
+      }
 
-    try {
-        const { name, email, password, role, doctorType, specialty, medicalLicenseNumber, schedule, contactNumber, designation, department } = req.body;
-     
-        const requesterRole = req.user.role;
+      const specialtyData = await Specialty.findOne({
+        name: new RegExp(`^${specialty.trim()}$`, 'i'),
+      });
+      if (!specialtyData) {
+        throw new Error(`Specialty '${specialty}' not found.`);
+      }
+        const departmentData = await Department.findById(department);
+  if (!departmentData) {
+    throw new Error(`Department not found.`);
+  }
 
-       
-        if (!name || !email || !password || !role) {
-            await session.abortTransaction();
-            session.endSession();
-            return res.status(400).json({ message: 'Name, email, password, and role are required.' });
+      if (!Array.isArray(schedule) || schedule.length === 0) {
+        throw new Error('Schedule must be a non-empty array.');
+      }
+
+      const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      for (const entry of schedule) {
+        const { dayOfWeek, startTime, endTime, isAvailable } = entry;
+        if (!validDays.includes(dayOfWeek) || !startTime || !endTime || typeof isAvailable !== 'boolean') {
+          throw new Error('Invalid schedule entry.');
         }
+      }
 
-     
-        if (requesterRole === 'ADMIN') {
-            if (role === 'ADMIN') {
-                await session.abortTransaction();
-                session.endSession();
-                return res.status(403).json({ message: 'Admin cannot create another admin.' });
-            }
-        } else if (['RECEPTIONIST', 'NURSE', 'DOCTOR', 'INVENTORYMANAGER'].includes(requesterRole)) {
-            await session.abortTransaction();
-            session.endSession();
-            return res.status(403).json({ message: 'You are not allowed to register users.' });
-        } else {
-            await session.abortTransaction();
-            session.endSession();
-            return res.status(403).json({ message: 'Invalid requester role.' });
-        }
+   
+      const existingDoctor = await Doctor.findOne({ userId: newUser._id });
+      if (existingDoctor) {
+        throw new Error('Doctor already exists for this user.');
+      }
 
-       
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            await session.abortTransaction();
-            session.endSession();
-            return res.status(400).json({ message: 'User with this email already exists.' });
-        }
+      const doctor = new Doctor({
+        userId: newUser._id,
+        doctorType,
+        specialty: specialtyData._id,
+            department: departmentData._id,
+        medicalLicenseNumber,
+        schedule,
+      });
 
-       
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
+      await doctor.save({ session });
 
-
-        const newUser = new User({
-            name,
-            email,
-            password: hashedPassword,
-            role
-        });
-
-        await newUser.save({ session });
-
-
-      if (role?.toUpperCase() === 'DOCTOR') {
-                      console.log('Registering Doctor...');
-    console.log('Specialty:', specialty);
-            if (!doctorType || !specialty || !medicalLicenseNumber) {
-                await session.abortTransaction();
-                session.endSession();
-                return res.status(400).json({ message: 'doctorType, specialty, and medicalLicenseNumber are required for doctor registration.' });
-            }
-
-            const specialtyData = await Specialty.findOne({  name: new RegExp(`^${specialty.trim()}$`, 'i') });
-                    console.log('Found specialtyData:', specialtyData);
-            if (!specialtyData) {
-                await session.abortTransaction();
-                session.endSession();
-                return res.status(400).json({ message: `Specialty '${specialty}' not found.` });
-            }
-                   
-    console.log('Schedule:', schedule);
-            if (!Array.isArray(schedule) || schedule.length === 0) {
-                await session.abortTransaction();
-                session.endSession();
-                return res.status(400).json({ message: 'Schedule must be a non-empty array.' });
-            }
-
-            const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-
-            for (const entry of schedule) {
-                const { dayOfWeek, startTime, endTime, isAvailable } = entry;
-
-                if (!validDays.includes(dayOfWeek)) {
-                    await session.abortTransaction();
-                    session.endSession();
-                    return res.status(400).json({ message: `Invalid dayOfWeek: ${dayOfWeek}` });
-                }
-
-                if (!startTime || !endTime) {
-                    await session.abortTransaction();
-                    session.endSession();
-                    return res.status(400).json({ message: 'Start time and end time are required for each schedule entry.' });
-                }
-
-                if (typeof isAvailable !== 'boolean') {
-                    await session.abortTransaction();
-                    session.endSession();
-                    return res.status(400).json({ message: 'isAvailable must be true or false.' });
-                }
-            }
-
-            const doctor = new Doctor({
-                userId: newUser._id,
-                doctorType,
-                specialty: specialtyData._id,
-                medicalLicenseNumber,
-                schedule
-            });
-
-            await doctor.save({ session });
-
-            await session.commitTransaction();
-            session.endSession();
-
-            return res.status(201).json({ message: 'Doctor registered successfully with schedule.', userId: newUser._id, doctorId: doctor._id  });
-
-        } else {
-           
-            if (!contactNumber || !designation) {
-                await session.abortTransaction();
-                session.endSession();
-                return res.status(400).json({ message: 'Contact number and designation are required for staff registration.' });
-            }
-
-            let departmentId = null;
-
-            if (department) {
-                const departmentData = await Department.findOne({ name: department.trim() });
-                if (!departmentData) {
-                    await session.abortTransaction();
-                    session.endSession();
-                    return res.status(400).json({ message: `Department '${department}' not found.` });
-                }
-                departmentId = departmentData._id;
-            }
-
-            const staff = new Staff({
-                userId: newUser._id,
-                contactNumber,
-                designation,
-                department: departmentId
-            });
-
-            await staff.save({ session });
-
-            await session.commitTransaction();
-            session.endSession();
-
-            return res.status(201).json({ message: 'Staff registered successfully.', userId: newUser._id, staff });
-        }
-
-    } catch (error) {
-        console.error('Registration error:', error);
-        await session.abortTransaction();
-        session.endSession();
-        res.status(500).json({ message: 'Server error.' });
+      await session.commitTransaction();
+      return res.status(201).json({
+        message: 'Doctor registered successfully with schedule.',
+        userId: newUser._id,
+        doctorId: doctor._id,
+      });
     }
-};
 
+   
+    if (!contactNumber || !designation) {
+      throw new Error('contactNumber and designation are required for Staff.');
+    }
+
+ 
+    let departmentId = null;
+    if (department) {
+      const departmentData = await Department.findOne({ name: department.trim() });
+      if (!departmentData) {
+        throw new Error(`Department '${department}' not found.`);
+      }
+      departmentId = departmentData._id;
+    }
+
+ 
+    const existingStaff = await Staff.findOne({ userId: newUser._id });
+    if (existingStaff) {
+      throw new Error('Staff already exists for this user.');
+    }
+
+    const staff = new Staff({
+      userId: newUser._id,
+      contactNumber,
+      designation,
+      department: departmentId,
+    });
+
+    await staff.save({ session });
+
+    await session.commitTransaction();
+    return res.status(201).json({
+      message: 'Staff registered successfully.',
+      userId: newUser._id,
+      staffId: staff._id,
+    });
+  } catch (error) {
+    console.error('Registration error:', error.message);
+    await session.abortTransaction();
+    return res.status(400).json({ message: error.message });
+  } finally {
+    session.endSession();
+  }
+};
 
 const getAllUsersHandler = async (req, res) => {
     try {
@@ -448,7 +430,9 @@ const getStaffByIdHandler = async (req, res) => {
 
 const getAllDoctorsHandler = async (req, res) => {
     try {
-        const doctors = await Doctor.find().populate('userId', 'name email role').populate('specialty', 'name');
+        const doctors = await Doctor.find().populate('userId', 'name email role')
+        .populate('specialty', 'name')
+          .populate('department','name')
         res.status(200).json({ doctors });
     } catch (error) {
         console.error('Fetch Doctors Error:', error);
