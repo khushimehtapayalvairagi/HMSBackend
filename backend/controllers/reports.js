@@ -1,15 +1,18 @@
 const OPDConsultation = require('../models/OPDConsultation');
 const Doctor = require('../models/Doctor');
-const IPDAdmission = require('../models/IPDAdmission');
 const Patient = require('../models/Patient');
+
+const IPDAdmission = require('../models/IPDAdmission');
+
 const Department = require('../models/Department');
 const AnesthesiaRecord = require('../models/AnesthesiaRecord');
-const ProcedureSchedule = require('../models/ProcedureSchedule');
 const FumigationEntry = require('../models/FumigationEntry');
-const LabourRoomDetails = require('../models/LabourRoomDetail');
+
+const LabourRoomDetail = require('../models/LabourRoomDetail');
+
 const Bill = require('../models/Bill');
 const Payment = require('../models/Payment');
-
+const mongoose = require('mongoose');
 
 
 exports.getCentralOPDRegister = async (req, res) => {
@@ -25,15 +28,25 @@ exports.getCentralOPDRegister = async (req, res) => {
       };
     }
 
-    if (doctorId) {
-      query.doctorId = doctorId;
-    }
+  if (doctorId && departmentId) {
+  // Find doctors in the department and check if the doctorId is among them
+  const doctors = await Doctor.find({ department: departmentId }, '_id');
+  const validDoctorIds = doctors.map(doc => doc._id.toString());
 
-    if (departmentId) {
-      const doctors = await Doctor.find({ department: departmentId }, '_id');
-      const doctorIds = doctors.map(doc => doc._id);
-      query.doctorId = { $in: doctorIds };
-    }
+  if (validDoctorIds.includes(doctorId)) {
+    query.doctorId = doctorId;
+  } else {
+    // doctor doesn't belong to selected department — skip or return empty
+    return res.status(200).json({ consultations: [] });
+  }
+} else if (doctorId) {
+  query.doctorId = doctorId;
+} else if (departmentId) {
+  const doctors = await Doctor.find({ department: departmentId }, '_id');
+  const doctorIds = doctors.map(doc => doc._id);
+  query.doctorId = { $in: doctorIds };
+}
+
 
     const consultations = await OPDConsultation.find(query)
       .populate({
@@ -45,7 +58,7 @@ exports.getCentralOPDRegister = async (req, res) => {
       })
       .populate({
         path: 'patientId',
-        select: 'patientId name age gender address phone status'
+        select: 'patientId fullName age gender address phone status'
       })
       .populate({
         path: 'doctorId',
@@ -100,7 +113,7 @@ exports.getDepartmentWiseOPDRegister = async (req, res) => {
     })
       .populate({
         path: 'patientId',
-        select: 'name age gender patientId'
+        select: 'fullName age gender patientId'
       })
       .populate({
         path: 'doctorId',
@@ -201,7 +214,7 @@ exports.getDoctorWiseOPDRegister = async (req, res) => {
         doctorId: doctor._id,
         consultationDateTime: { $gte: start, $lte: end }
       })
-        .populate('patientId', 'name patientId')
+        .populate('patientId', 'fullName patientId')
         .select('consultationDateTime chiefComplaint diagnosis patientId');
 
       if (consultations.length > 0) {
@@ -227,9 +240,10 @@ exports.getDoctorWiseOPDRegister = async (req, res) => {
 
 
 exports.getCentralIPDRegister = async (req, res) => {
+  console.log("📥 Query received:", req.query);
+
   try {
     const { startDate, endDate, departmentId, doctorId } = req.query;
-
     const match = {};
 
     if (startDate || endDate) {
@@ -238,9 +252,12 @@ exports.getCentralIPDRegister = async (req, res) => {
       if (endDate) match.admissionDate.$lte = new Date(endDate);
     }
 
-    if (doctorId) {
-      match.admittingDoctorId = doctorId;
-    }
+if (doctorId) {
+  const doctor = await Doctor.findOne({ userId: doctorId });
+  if (!doctor) return res.status(404).json({ message: 'Doctor not found' });
+  match.admittingDoctorId = doctor._id;
+}
+
 
     if (departmentId) {
       // First get all doctors in the department
@@ -249,7 +266,7 @@ exports.getCentralIPDRegister = async (req, res) => {
     }
 
     const admissions = await IPDAdmission.find(match)
-      .populate('patientId', 'name patientId')
+      .populate('patientId', 'fullName patientId')
       .populate({
         path: 'admittingDoctorId',
         populate: [
@@ -260,7 +277,13 @@ exports.getCentralIPDRegister = async (req, res) => {
       .populate('wardId', 'name')
       .populate('roomCategoryId', 'name')
       .sort({ admissionDate: -1 });
-
+console.log('🧠 Raw Doctor Data:', admissions.map(a => ({
+  admissionId: a._id,
+  doctorId: a.admittingDoctorId?._id,
+  populatedUserId: a.admittingDoctorId?.userId,
+  doctorName: a.admittingDoctorId?.userId?.name,
+  departmentName: a.admittingDoctorId?.department?.name,
+})));
     const result = admissions.map(ad => ({
       _id: ad._id,
       admissionDate: ad.admissionDate,
@@ -290,7 +313,7 @@ exports.getCentralIPDRegister = async (req, res) => {
 
 exports.getDepartmentWiseIPDRegister = async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
+  const { startDate, endDate, departmentId } = req.query;
 
     const match = {};
     if (startDate || endDate) {
@@ -300,7 +323,7 @@ exports.getDepartmentWiseIPDRegister = async (req, res) => {
     }
 
     const admissions = await IPDAdmission.find(match)
-      .populate('patientId', 'name patientId')
+      .populate('patientId', 'fullName patientId')
       .populate({
         path: 'admittingDoctorId',
         populate: [
@@ -368,7 +391,7 @@ exports.getOTProcedureRegister = async (req, res) => {
 
     const schedules = await ProcedureSchedule.find(match)
       .populate('procedureId', 'name cost')
-      .populate('patientId', 'name patientId')
+      .populate('patientId', 'fullName patientId')
       .populate({
         path: 'surgeonId',
         populate: [
@@ -433,7 +456,7 @@ exports.getAnesthesiaRegister = async (req, res) => {
         path: 'procedureScheduleId',
         populate: [
           { path: 'procedureId', select: 'name cost' },
-          { path: 'patientId', select: 'name patientId' },
+          { path: 'patientId', select: 'fullName patientId' },
           { path: 'anestheticId', populate: { path: 'userId', select: 'name' } }
         ]
       });
@@ -476,6 +499,8 @@ exports.getAnesthesiaRegister = async (req, res) => {
 
 
 exports.getOTFumigationReport = async (req, res) => {
+
+
   try {
     const { startDate, endDate, otRoomId } = req.query;
 
@@ -487,12 +512,12 @@ exports.getOTFumigationReport = async (req, res) => {
       if (endDate) match.date.$lte = new Date(endDate);
     }
 
-    if (otRoomId) match.otRoomId = otRoomId;
-
+   if (otRoomId) match.otRoomId = new mongoose.Types.ObjectId(otRoomId);
+  console.log('Match:', match);
     const entries = await FumigationEntry.find(match)
       .populate('otRoomId', 'name') 
       .populate('performedBy', 'name role');
-
+console.log("All Fumigation Entries:", entries);
     res.status(200).json(entries);
   } catch (error) {
     console.error('Fumigation Report Error:', error);
@@ -509,18 +534,23 @@ exports.getBirthRecordReport = async (req, res) => {
     const match = {};
 
     if (startDate || endDate) {
-      match.dob_baby = {};
-      if (startDate) match.dob_baby.$gte = new Date(startDate);
-      if (endDate) match.dob_baby.$lte = new Date(endDate);
+      match.dobBaby = {};
+      if (startDate) match.dobBaby.$gte = new Date(startDate);
+      if (endDate) match.dobBaby.$lte = new Date(endDate);
     }
 
-    if (gender) match.gender = gender;
-    if (delivery_type) match.delivery_type = delivery_type;
+  if (gender) {
+  match.gender = { $regex: new RegExp(gender, 'i') }; // case-insensitive
+}
+if (delivery_type) {
+  match.deliveryType = { $regex: new RegExp(delivery_type, 'i') };
+}
 
-    const records = await LabourRoomDetails.find(match)
-      .populate('patientId', 'name age gender patientId')
+
+    const records = await LabourRoomDetail.find(match)
+      .populate('patientId', 'fullName age gender patientId')
       .populate('procedureScheduleId', 'scheduledDateTime procedureType')
-      .populate('captured_by_user_id', 'name role');
+      .populate('capturedByUserId', 'name role');
 
     res.status(200).json(records);
   } catch (error) {

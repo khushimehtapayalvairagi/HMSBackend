@@ -15,9 +15,9 @@ exports.createIPDAdmission = async (req, res) => {
    console.log('📥 IPDAdmission payload:', req.body);
 
     try {
-        const { patientId, visitId, wardId, bedNumber, roomCategoryId, admittingDoctorId, expectedDischargeDate } = req.body;
+        const { patientId, visitId, wardId, bedNumber, roomCategoryId,  admittingDoctorId: userDoctorId, expectedDischargeDate } = req.body;
 
-        if (!patientId || !visitId || !wardId || !bedNumber || !roomCategoryId || !admittingDoctorId) {
+        if (!patientId || !visitId || !wardId || !bedNumber || !roomCategoryId || !userDoctorId) {
             return res.status(400).json({ message: 'All fields are required.' });
         }
           const existingAdmission = await IPDAdmission.findOne({ patientId, status: 'Admitted' });
@@ -29,7 +29,8 @@ exports.createIPDAdmission = async (req, res) => {
             Patient.findById(patientId),
             Visit.findById(visitId),
 
-          Doctor.findOne({ userId: admittingDoctorId }),
+         Doctor.findOne({ userId: userDoctorId }),
+
 
             
             Ward.findById(wardId)
@@ -67,7 +68,7 @@ exports.createIPDAdmission = async (req, res) => {
             wardId,
             bedNumber,
             roomCategoryId,
-            admittingDoctorId,
+            admittingDoctorId: doctor._id,
             expectedDischargeDate
         });
 

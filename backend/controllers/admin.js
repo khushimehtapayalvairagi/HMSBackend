@@ -76,6 +76,10 @@ const registerHandler = async (req, res) => {
       if (!specialtyData) {
         throw new Error(`Specialty '${specialty}' not found.`);
       }
+        const departmentData = await Department.findById(department);
+  if (!departmentData) {
+    throw new Error(`Department not found.`);
+  }
 
       if (!Array.isArray(schedule) || schedule.length === 0) {
         throw new Error('Schedule must be a non-empty array.');
@@ -99,6 +103,7 @@ const registerHandler = async (req, res) => {
         userId: newUser._id,
         doctorType,
         specialty: specialtyData._id,
+            department: departmentData._id,
         medicalLicenseNumber,
         schedule,
       });
@@ -425,7 +430,9 @@ const getStaffByIdHandler = async (req, res) => {
 
 const getAllDoctorsHandler = async (req, res) => {
     try {
-        const doctors = await Doctor.find().populate('userId', 'name email role').populate('specialty', 'name');
+        const doctors = await Doctor.find().populate('userId', 'name email role')
+        .populate('specialty', 'name')
+          .populate('department','name')
         res.status(200).json({ doctors });
     } catch (error) {
         console.error('Fetch Doctors Error:', error);

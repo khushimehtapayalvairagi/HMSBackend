@@ -34,7 +34,7 @@ const loginHandler = async (req, res) => {
     }
     
     const token = setUser(user, {
-      designation: staffData?.designation || null
+       designation: extraInfo.designation || null
     });
 
     res.status(200).json({
