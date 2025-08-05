@@ -114,7 +114,7 @@ const getAvailableDoctorsHandler = async (req, res) => {
 const createVisitHandler = async (req, res) => {
     try {
         const { patientId, visitType, referredBy, assignedDoctorId, payment } = req.body;
-
+        // console.log(assignedDoctorId);
         if (!patientId || !visitType || !assignedDoctorId) {
             return res.status(400).json({ message: 'patientId, visitType, and assignedDoctorId are required.' });
         }
@@ -130,7 +130,7 @@ const createVisitHandler = async (req, res) => {
         if (!patient) {
             return res.status(404).json({ message: 'Patient not found.' });
         }
-
+        const doctor = await Doctor.findOne({_id: assignedDoctorId}).populate('userId','name');
         let referralPartnerId = null;
 
        
@@ -156,37 +156,24 @@ const createVisitHandler = async (req, res) => {
 
             referralPartnerId = referralPartner._id;
         }
-
-       
-        const doctor = await Doctor.findById(assignedDoctorId);
-        if (!doctor) {
-            return res.status(404).json({ message: 'Assigned doctor not found.' });
-        }
-        // console.log(doctor);
-        console.log(patient);
-      
         const newVisit = new Visit({
             patientId: patient.patientId, 
             patientDbId: patient._id,    
             visitType,
             referredBy: referralPartnerId,
-           assignedDoctorId:  doctor.userId,
-
+            assignedDoctorId:  assignedDoctorId,
             payment: visitType === 'OPD' ? payment : undefined
         });
 
         await newVisit.save();
-console.log('Saved Visit:', newVisit);
-       getIO().to(`doctor_${newVisit.assignedDoctorId}`).emit('newAssignedPatient', {
-            visitId: newVisit._id,
-            patientId: newVisit.patientId,
-            visitType: newVisit.visitType,
-              
-       
+   
+        const newVisitObject = newVisit.toObject();
+        res.status(201).json({ message: 'Visit created successfully.', visit: 
+            { patientName:patient.fullName,
+              doctorName:doctor.userId.name,
+              ...newVisitObject
+            } 
         });
-console.log(`Emitting newAssignedPatient event to doctor_${newVisit.assignedDoctorId}`)
-    
-        res.status(201).json({ message: 'Visit created successfully.', visit: newVisit });
     } catch (error) {
         console.error('Create Visit Error:', error);
         res.status(500).json({ message: 'Server error.' });
@@ -243,12 +230,6 @@ const updateVisitStatusHandler = async (req, res) => {
         } else {
             visit.declineReason = undefined;
         }
-
-       
-  
-
-
-
         await visit.save();
         if (newStatus === 'Waiting') {
   getIO().to(`doctor_${visit.assignedDoctorId}`).emit('newAssignedPatient', {

@@ -12,7 +12,7 @@ const Bill = require('../models/Bill');
 
 exports.createIPDAdmission = async (req, res) => {
 
-   console.log('📥 IPDAdmission payload:', req.body);
+//    console.log('📥 IPDAdmission payload:', req.body);
 
     try {
         const { patientId, visitId, wardId, bedNumber, roomCategoryId, admittingDoctorId, expectedDischargeDate } = req.body;
@@ -28,10 +28,7 @@ exports.createIPDAdmission = async (req, res) => {
         const [patient, visit, doctor, ward] = await Promise.all([
             Patient.findById(patientId),
             Visit.findById(visitId),
-
-          Doctor.findOne({ userId: admittingDoctorId }),
-
-            
+            Doctor.findOne({ _id: admittingDoctorId }),
             Ward.findById(wardId)
         ]);
 

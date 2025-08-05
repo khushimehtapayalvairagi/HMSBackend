@@ -1,5 +1,5 @@
 const User = require('../models/User');
-const Doctor = require('../models/Doctor'); 
+const Doctor = require('../models/Doctor');
 const bcrypt = require('bcrypt');
 const Staff = require('../models/Staff');
 const { setUser } = require("../utils/auth");
@@ -19,29 +19,54 @@ const loginHandler = async (req, res) => {
     }
 
     let extraInfo = {};
-    let staffData=null;
+    let tokenPayload = {
+      userId: user._id,
+      email: user.email,
+      role: user.role,
+    };
+    let staff=null;
+    let doctor=null;
     if (user.role === 'STAFF') {
-      staffData = await Staff.findOne({ userId: user._id }).populate('department', 'name');
-      if (!staffData) {
+      staff = await Staff.findOne({ userId: user._id }).populate('department', 'name');
+      if (!staff) {
         return res.status(404).json({ message: 'Staff profile not found.' });
       }
 
       extraInfo = {
-        designation: staffData.designation,
-        contactNumber: staffData.contactNumber,
-        department: staffData.department ? staffData.department.name : null
+        designation: staff.designation,
+        contactNumber: staff.contactNumber,
+        department: staff.department ? staff.department.name : null
       };
-    }
-    
-    const token = setUser(user, {
-      designation: staffData?.designation || null
-    });
 
+      tokenPayload._id = staff._id; 
+      tokenPayload.designation = staff.designation;
+
+    } else if (user.role === 'DOCTOR') {
+      doctor = await Doctor.findOne({ userId: user._id });
+      if (!doctor) {
+        return res.status(404).json({ message: 'Doctor profile not found.' });
+      }
+
+      tokenPayload._id = doctor._id; 
+    } else {
+      tokenPayload._id = user._id; 
+    }
+
+    const token = setUser(tokenPayload); 
+
+    let finalId = user._id;
+    if (user.role === 'STAFF' && staff) {
+      finalId = staff._id;
+    } else if (user.role === 'DOCTOR' && doctor) {
+      finalId = doctor._id;
+    }
+
+    // console.log(finalId);
     res.status(200).json({
       message: 'Login successful',
       token,
       user: {
-        id: user._id,
+        id: finalId,
         name: user.name,
         email: user.email,
         role: user.role,
@@ -54,6 +79,5 @@ const loginHandler = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
-
 
 module.exports = loginHandler;

@@ -4,15 +4,9 @@ dotenv.config();
 
 const secret = process.env.JWT_SECRET
 
-function setUser(user, options = {}) {
-  return jwt.sign({
-    _id: user._id,
-    email: user.email,
-    role: user.role,
-    designation: options.designation || null 
-  }, secret);
+function setUser(payload) {
+  return jwt.sign(payload, secret, { expiresIn: '7d' }); 
 }
-
 
 function getUser(token){
     if(!token) return null;
