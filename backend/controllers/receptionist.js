@@ -187,10 +187,16 @@ const getVisitsByPatientHandler = async (req, res) => {
         const visits = await Visit.find({ patientId: patientId })
             .sort({ visitDate: -1 })
           
-            .populate({
-                path: 'assignedDoctorId',
-                populate: { path: 'userId', select: 'name email' }
-            })
+           .populate({
+    path: 'assignedDoctorId',
+    model: 'Doctor',
+    populate: {
+      path: 'userId',
+      model: 'User',
+      select: 'name email'
+    }
+  })
+
             .populate({
                 path: 'referredBy',
                 select: 'name contact_person contact_number' 
@@ -232,8 +238,8 @@ const updateVisitStatusHandler = async (req, res) => {
         }
         await visit.save();
         if (newStatus === 'Waiting') {
-  getIO().to(`doctor_${visit.assignedDoctorId}`).emit('newAssignedPatient', {
-    doctorId: visit.assignedDoctorId,
+  getIO().to(`doctor_${visit. assignedDoctorUserId}`).emit('newAssignedPatient', {
+    doctorId: visit. assignedDoctorUserId,
     visitId: visit._id,
     patientName: visit.patientDbId?.fullName || 'New patient',
   });

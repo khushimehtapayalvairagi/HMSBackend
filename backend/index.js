@@ -30,7 +30,13 @@ const doctorHandler = require('./routes/doctor');
 const ipdHandler = require('./routes/ipd');
 const procedure = require('./routes/procedure');
 const inventoryManager = require('./routes/inventoryManager');
+
+
+
+
+
 const billingHandler = require('./routes/billing');
+
 const reports = require('./routes/reports');
 
 
@@ -44,8 +50,11 @@ server.listen(PORT, () => {
 
 
 app.use('/api/auth', AuthHandler);
+
+app.use('/api/billing', restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'RECEPTIONIST', 'STAFF']), billingHandler);
+
 app.use('/api/admin',restrictToLoggedInUserOnly,restrictTo(['ADMIN']),AdminHandler);
-app.use('/api/receptionist',restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'STAFF']),restrictToDesignation(['Receptionist']),ReceptionistHandler);
+app.use('/api/receptionist',restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'STAFF']),restrictToDesignation(['Receptionist',"Head Nurse"]),ReceptionistHandler);
 app.use('/api/doctor', restrictToLoggedInUserOnly,restrictTo(['ADMIN', 'DOCTOR']),doctorHandler);
 app.use('/api/ipd', restrictToLoggedInUserOnly,restrictTo(['ADMIN', 'DOCTOR', 'STAFF']), restrictToDesignation(['Receptionist', 'Head Nurse']),ipdHandler);
 app.use('/api/procedures',restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'DOCTOR', 'STAFF']), restrictToDesignation(['Receptionist', 'Head Nurse']),procedure);

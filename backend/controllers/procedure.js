@@ -58,11 +58,11 @@ exports.getSchedulesByPatient = async (req, res) => {
         const procedures = await ProcedureSchedule.find({ patientId })
              .populate([
     { path: 'procedureId' },
-    { path: 'surgeonId', populate: { path: 'userId', select: 'name email' } },
+    { path: 'surgeonId', populate: { path: 'userId',  model:"User",select: 'name email' } },
     { path: 'anestheticId', populate: { path: 'userId', select: 'name email' } },
      { path: 'roomId', select: 'name' },
     { path: 'labourRoomId', select: 'name' },
-    { path: 'assistantIds', populate: { path: 'userId', select: 'name' } }
+    { path: 'assistantIds',  select: 'name' } 
   ]);
 
 
