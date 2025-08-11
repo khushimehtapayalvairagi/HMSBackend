@@ -68,6 +68,7 @@ const createOPDConsultationHandler = async (req, res) => {
         console.log(emitData);
         if (consultation.admissionAdvice === true) {
             // console.log("socket is working");
+             console.log("✅ Socket should emit now");
             getIO().to('receptionist_room').emit('newIPDAdmissionAdvice', {
                 patientId: patient.patientId,
                 patientName: patient.fullName,
