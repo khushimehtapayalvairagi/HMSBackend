@@ -42,7 +42,7 @@ const createOPDConsultationHandler = async (req, res) => {
         const consultation = new OPDConsultation({
             visitId,
             patientId,
-               doctorId: doctor._id,
+            doctorId: doctorUser._id,
             chiefComplaint,
             diagnosis,
             doctorNotes,

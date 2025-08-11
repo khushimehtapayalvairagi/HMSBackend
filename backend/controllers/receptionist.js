@@ -224,7 +224,7 @@ const updateVisitStatusHandler = async (req, res) => {
             return res.status(400).json({ message: 'declineReason is required when visit is declined.' });
         }
 
-        const visit = await Visit.findById(id);
+        const visit = await Visit.findById(id).populate('patientDbId');
         if (!visit) {
             return res.status(404).json({ message: 'Visit not found.' });
         }
@@ -238,12 +238,12 @@ const updateVisitStatusHandler = async (req, res) => {
         }
         await visit.save();
         if (newStatus === 'Waiting') {
-  getIO().to(`doctor_${visit. assignedDoctorUserId}`).emit('newAssignedPatient', {
-    doctorId: visit. assignedDoctorUserId,
-    visitId: visit._id,
-    patientName: visit.patientDbId?.fullName || 'New patient',
-  });
-}
+            getIO().to(`doctor_${visit. assignedDoctorUserId}`).emit('newAssignedPatient', {
+                doctorId: visit. assignedDoctorUserId,
+                visitId: visit._id,
+                patientName: visit.patientDbId.fullName || 'New patient',
+            });
+        }
 
         res.status(200).json({ message: 'Visit status updated successfully.', visit });
     } catch (error) {
