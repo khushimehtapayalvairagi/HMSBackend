@@ -42,9 +42,8 @@ const createOPDConsultationHandler = async (req, res) => {
         const consultation = new OPDConsultation({
             visitId,
             patientId,
-           doctorId,
-
-         chiefComplaint,
+            doctorId: doctorUser._id,
+            chiefComplaint,
             diagnosis,
             doctorNotes,
             admissionAdvice: admissionAdvice || false,
