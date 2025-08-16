@@ -238,13 +238,13 @@ const updateVisitStatusHandler = async (req, res) => {
         }
         await visit.save();
         if (newStatus === 'Waiting') {
+
             getIO().to(`doctor_${visit. assignedDoctorUserId}`).emit('newAssignedPatient', {
                 doctorId: visit. assignedDoctorUserId,
                 visitId: visit._id,
                 patientName: visit.patientDbId.fullName || 'New patient',
             });
         }
-
         res.status(200).json({ message: 'Visit status updated successfully.', visit });
     } catch (error) {
         console.error('Update Visit Status Error:', error);

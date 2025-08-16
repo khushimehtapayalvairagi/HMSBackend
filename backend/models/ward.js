@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const BedSchema = new mongoose.Schema({
-    bedNumber: { type: String, required: true, unique:true},
+    bedNumber: { type: String, required: true},
     status: { type: String, enum: ['available', 'occupied', 'cleaning'], default: 'available' }
 });
 
