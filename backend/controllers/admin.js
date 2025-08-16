@@ -12,6 +12,7 @@ const Doctor = require('../models/Doctor');
 const Staff = require('../models/Staff');
 const ReferralPartner = require('../models/ReferralPartner');
 const OperationTheater = require('../models/OperationTheater');
+const IPDAdmission = require('../models/IPDAdmission');
 const bcrypt = require('bcrypt');
 
 
@@ -306,14 +307,35 @@ const createWardHandler = async (req, res) => {
 };
 
 const getAllWardsHandler = async (req, res) => {
-    try {
-        const wards = await Ward.find().populate('roomCategory');
-        res.status(200).json({ wards });
-    } catch (error) {
-        console.error('Get Wards Error:', error);
-        res.status(500).json({ message: 'Server error.' });
-    }
+  try {
+    const wards = await Ward.find().populate('roomCategory');
+
+    // fetch only admitted admissions
+    const activeAdmissions = await IPDAdmission.find({ status: 'Admitted' });
+
+    // map admitted beds
+    const occupiedBeds = activeAdmissions.map(a => `${a.wardId}-${a.bedNumber}`);
+
+    const response = wards.map(ward => ({
+      ...ward.toObject(),
+      beds: ward.beds.map(bed => {
+        // 💡 If admission discharged, don't mark occupied
+        const isOccupied = occupiedBeds.includes(`${ward._id}-${bed.bedNumber}`);
+        return {
+          ...bed.toObject(),
+          status: isOccupied ? 'occupied' : 'available'
+        };
+      })
+    }));
+
+    res.status(200).json({ wards: response });
+  } catch (error) {
+    console.error('Get Wards Error:', error);
+    res.status(500).json({ message: 'Server error.' });
+  }
 };
+
+
 
 const createLabourRoomHandler = async (req, res) => {
     try {

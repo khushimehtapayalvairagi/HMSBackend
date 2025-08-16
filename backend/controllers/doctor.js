@@ -57,10 +57,12 @@ const createOPDConsultationHandler = async (req, res) => {
         visit.status = 'Completed';
         await visit.save();
         const emitData = {
-            patientId: patient.patientId,
-            patiendDbId: patientId,
+            // patientId: patient.patientId,
+            patientDbId: patientId,        // ✅ Mongo ObjectId
+             patientDisplayId: patient.patientId,
             patientName: patient.fullName,
             visitId: consultation.visitId,
+               admittingDoctorId: consultation.doctorId,
             doctorId: consultation.doctorId,
             doctorName: doctorUser.userId.name,
             chiefComplaint: consultation.chiefComplaint
@@ -72,9 +74,10 @@ const createOPDConsultationHandler = async (req, res) => {
             getIO().to('receptionist_room').emit('newIPDAdmissionAdvice', {
                 patientId: patient.patientId,
                 patientName: patient.fullName,
-                patiendDbId: patientId,
+                patientDbId: patientId,
                 visitId: consultation.visitId,
                 doctorId: consultation.doctorId,
+                   admittingDoctorId: consultation.doctorId,
                 doctorName: doctorUser.userId.name,
                 chiefComplaint: consultation.chiefComplaint
             });

@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const DailyProgressReportSchema = new mongoose.Schema({
     ipdAdmissionId: { type: mongoose.Schema.Types.ObjectId, ref: 'IPDAdmission', required: true },
     reportDateTime: { type: Date, default: Date.now },
-    recordedByUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    recordedByUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff', required: true },
     vitals: {
         temperature: Number,
         pulse: Number,
