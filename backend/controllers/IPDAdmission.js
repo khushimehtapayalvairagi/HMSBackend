@@ -12,7 +12,7 @@ const Bill = require('../models/Bill');
 
 exports.createIPDAdmission = async (req, res) => {
 
-//    console.log('📥 IPDAdmission payload:', req.body);
+   console.log('📥 IPDAdmission payload:', req.body);
 
     try {
         const { patientId, visitId, wardId, bedNumber, roomCategoryId,  admittingDoctorId: userDoctorId, expectedDischargeDate } = req.body;
@@ -28,7 +28,7 @@ exports.createIPDAdmission = async (req, res) => {
         const [patient, visit, doctor, ward] = await Promise.all([
             Patient.findById(patientId),
             Visit.findById(visitId),
-            Doctor.findOne({ _id: admittingDoctorId }),
+            Doctor.findOne({_id:userDoctorId }),
             Ward.findById(wardId)
         ]);
 
@@ -59,12 +59,13 @@ exports.createIPDAdmission = async (req, res) => {
         await ward.save();
 
         const admission = new IPDAdmission({
-            patientId,
+           patientId,
+            
             visitId,
             wardId,
             bedNumber,
             roomCategoryId,
-            admittingDoctorId: doctor._id,
+           admittingDoctorId: userDoctorId,
             expectedDischargeDate
         });
 
@@ -87,7 +88,11 @@ exports.getIPDAdmissionsByPatient = async (req, res) => {
         const admissions = await IPDAdmission.find({ patientId })
         .populate('patientId', 'fullName')
         .populate('visitId')  
-            .populate( 'wardId roomCategoryId admittingDoctorId');
+            .populate( 'wardId roomCategoryId')
+            .populate({
+    path: 'admittingDoctorId',
+    populate: { path: 'userId', select: 'name' }
+  });
         res.status(200).json({ admissions });
     } catch (error) {
         res.status(500).json({ message: 'Server error.' });
@@ -199,9 +204,16 @@ exports.getDailyReportsByAdmission = async (req, res) => {
         const { ipdAdmissionId } = req.params;
 
         const reports = await DailyProgressReport.find({ ipdAdmissionId })
-            .populate('recordedByUserId', 'name role')
-            .sort({ reportDateTime: -1 });
+           .populate({
+  path: 'recordedByUserId',
+  populate: {
+    path: 'userId',
+    select: 'name role'
+  }
+})
 
+            .sort({ reportDateTime: -1 });
+console.log("Fetched reports with populated recordedByUserId:", JSON.stringify(reports, null, 2));
         res.status(200).json({ reports });
     } catch (error) {
         res.status(500).json({ message: 'Server error.' });

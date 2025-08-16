@@ -238,8 +238,8 @@ const updateVisitStatusHandler = async (req, res) => {
         }
         await visit.save();
         if (newStatus === 'Waiting') {
-  getIO().to(`doctor_${visit. assignedDoctorId}`).emit('newAssignedPatient', {
-    doctorId: visit. assignedDoctorId,
+  getIO().to(`doctor_${visit.assignedDoctorId}`).emit('newAssignedPatient', {
+    doctorId: visit.assignedDoctorId,
     visitId: visit._id,
     patientName: visit.patientDbId?.fullName || 'New patient',
   });
