@@ -7,7 +7,6 @@ const Department = require('../models/Department');
 const AnesthesiaRecord = require('../models/AnesthesiaRecord');
 const FumigationEntry = require('../models/FumigationEntry');
 const LabourRoomDetail = require('../models/LabourRoomDetail');
-const ProcedureSchedule = require('../models/ProcedureSchedule');
 const Bill = require('../models/Bill');
 const Payment = require('../models/Payment');
 const mongoose = require('mongoose');
