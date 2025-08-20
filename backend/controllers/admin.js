@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const User = require('../models/User'); 
 const Department = require('../models/Department');
-const Specialty = require('../models/Specialty');
+const Specialty = require('../models/Specialty')
 const RoomCategory = require('../models/Room');
 const Ward = require('../models/Ward');
 const LabourRoom = require('../models/LabourRoom');
@@ -46,7 +46,7 @@ const registerHandler = async (req, res) => {
       throw new Error('Only Admin is allowed to register users.');
     }
     if (role === 'ADMIN') {
-      throw new Error('Admin cannot create another Admin.');
+    //   throw new Error('Admin cannot create another Admin.');
     }
 
     const existingUser = await User.findOne({ email });

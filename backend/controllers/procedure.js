@@ -170,7 +170,7 @@ exports.getLabourRoomDetail = async (req, res) => {
     try {
         const { procedureScheduleId } = req.params;
 
-        const detail = await LabourRoomDetail.findOne({ procedureScheduleId }).populate('capturedByUserId', 'name email');
+        const detail = await LabourRoomDetail.findOne({ procedureScheduleId }) .populate('capturedByUserId', 'name role')
         if (!detail) return res.status(404).json({ message: 'No labour record found.' });
 
         res.status(200).json({ detail });
