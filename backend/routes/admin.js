@@ -5,7 +5,7 @@ const {registerHandler,getAllUsersHandler,createDepartmentHandler
     ,createProcedureHandler,getAllProceduresHandler,createManualChargeItemHandler,getAllManualChargeItemsHandler
     ,getAllStaffHandler,getStaffByIdHandler,getAllDoctorsHandler
     ,getDoctorByIdHandler,createReferralPartnerHandler,getAllReferralPartnersHandler,createOperationTheaterHandler
-    ,getAllOperationTheatersHandler}  = require("../controllers/admin")
+    ,getAllOperationTheatersHandler,deleteUserHandler}  = require("../controllers/admin")
 
 const router = express.Router();
 router.post('/users', registerHandler); 
@@ -33,6 +33,7 @@ router.post('/referral-partners', createReferralPartnerHandler);
 router.get('/referral-partners', getAllReferralPartnersHandler);
 router.post('/operation-theaters', createOperationTheaterHandler);
 router.get('/operation-theaters', getAllOperationTheatersHandler);
+router.delete('/users',deleteUserHandler);
 
 
 
