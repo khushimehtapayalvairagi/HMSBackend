@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-
 const User = require('../models/User'); 
 const Department = require('../models/Department');
 const Specialty = require('../models/Specialty')
@@ -335,7 +334,6 @@ const getAllWardsHandler = async (req, res) => {
   }
 };
 
-
 const createLabourRoomHandler = async (req, res) => {
     try {
         const { name, description } = req.body;
@@ -423,7 +421,6 @@ const getAllManualChargeItemsHandler = async (req, res) => {
         res.status(500).json({ message: 'Server error.' });
     }
 };
-
 
 const getAllStaffHandler = async (req, res) => {
     try {
@@ -548,7 +545,6 @@ const getAllOperationTheatersHandler = async (req, res) => {
         res.status(500).json({ message: 'Server error.' });
     }
 };
-
 
 const deleteUserHandler = async (req, res) => {
   try {

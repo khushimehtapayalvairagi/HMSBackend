@@ -43,7 +43,6 @@ const billingHandler = require('./routes/billing');
 const reports = require('./routes/reports');
 
 
-// Database Connect
 connectDB(process.env.DATABASE_URL);
 
 

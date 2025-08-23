@@ -9,8 +9,8 @@ const {registerHandler,getAllUsersHandler,createDepartmentHandler
 
 const router = express.Router();
 router.post('/users', registerHandler); 
-
 router.get('/users', getAllUsersHandler);
+router.delete('/users',deleteUserHandler);
 router.post('/departments',createDepartmentHandler);
 router.get('/departments',getAllDepartmentsHandler);
 router.post('/specialties', createSpecialtyHandler);
@@ -33,7 +33,6 @@ router.post('/referral-partners', createReferralPartnerHandler);
 router.get('/referral-partners', getAllReferralPartnersHandler);
 router.post('/operation-theaters', createOperationTheaterHandler);
 router.get('/operation-theaters', getAllOperationTheatersHandler);
-router.delete('/users',deleteUserHandler);
 
 
 
