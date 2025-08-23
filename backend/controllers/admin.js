@@ -546,45 +546,48 @@ const getAllOperationTheatersHandler = async (req, res) => {
     }
 };
 
+
 const deleteUserHandler = async (req, res) => {
   try {
-    const { id, role } = req.params; 
-    if (!id || !role) {
-      return res.status(400).json({ message: "id and role are required." });
-    }
+    const { id, role } = req.body;
 
-    let userId;
+    if (!id || !role) {
+      return res.status(400).json({ message: 'id and role are required.' });
+    }
 
     if (role === 'DOCTOR') {
       const doctor = await Doctor.findById(id);
-      if (!doctor) {
-        return res.status(404).json({ message: "Doctor not found." });
-      }
-      userId = doctor.userId;
-      await Doctor.findByIdAndDelete(id);
+      if (!doctor) return res.status(404).json({ message: 'Doctor not found.' });
+
+      doctor.isActive = false;
+      await doctor.save();
+
+      await User.findByIdAndUpdate(doctor.userId, { isActive: false });
+
+      return res.status(200).json({ message: 'Doctor deactivated successfully.' });
 
     } else if (role === 'STAFF') {
       const staff = await Staff.findById(id);
-      if (!staff) {
-        return res.status(404).json({ message: "Staff not found." });
-      }
-      userId = staff.userId;
-      await Staff.findByIdAndDelete(id);
+      if (!staff) return res.status(404).json({ message: 'Staff not found.' });
+
+      // Soft delete staff + user
+      staff.isActive = false;
+      await staff.save();
+
+      await User.findByIdAndUpdate(staff.userId, { isActive: false });
+
+      return res.status(200).json({ message: 'Staff deactivated successfully.' });
 
     } else {
-      return res.status(400).json({ message: "Invalid role provided. Must be 'DOCTOR' or 'STAFF'." });
+      return res.status(400).json({ message: 'Invalid role. Only DOCTOR or STAFF allowed.' });
     }
-    if (userId) {
-      await User.findByIdAndDelete(userId);
-    }
-
-    return res.status(200).json({ message: `${role} and linked user deleted successfully.` });
 
   } catch (error) {
-    console.error("Delete User Error:", error);
-    res.status(500).json({ message: "Server error.", error: error.message });
+    console.error('Delete User Error:', error);
+    res.status(500).json({ message: 'Server error.' });
   }
 };
+
 
 module.exports = {registerHandler,getAllUsersHandler,createDepartmentHandler,getAllDepartmentsHandler
     ,createSpecialtyHandler,getAllSpecialtiesHandler,createRoomCategoryHandler,getAllRoomCategoriesHandler,createWardHandler

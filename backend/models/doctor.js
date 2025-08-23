@@ -11,7 +11,9 @@ const DoctorSchema = new mongoose.Schema({
         startTime: { type: String, required: true },
         endTime: { type: String, required: true },
         isAvailable: { type: Boolean, default: true }
-    }]
+    }],
+    isActive: { type: Boolean, default: true } 
+
 });
 
 module.exports = mongoose.model('Doctor', DoctorSchema);
