@@ -1,6 +1,12 @@
 const express = require('express');
 const multer = require('multer');
-const {bulkUploadSpeciality,bulkUploadDepartment} = require('../controllers/bulkUpload');
+const { 
+  bulkUploadSpeciality,
+  bulkUploadDepartment,
+  bulkUploadDoctors,
+  bulkUploadStaff
+} = require('../controllers/bulkUpload');
+
 
 const router = express.Router();
 const upload = multer({ dest: '/tmp/uploads' }); 
