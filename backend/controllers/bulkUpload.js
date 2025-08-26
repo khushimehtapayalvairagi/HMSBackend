@@ -1,13 +1,12 @@
 const fs = require("fs");
 const csv = require("csv-parser");
 const mongoose = require("mongoose");
-const Speciality = require("../models/Speciality");
+const Specialty = require("../models/Specialty");
 const Department = require("../models/Department");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const Doctor = require("../models/Doctor");
 const Staff = require("../models/Staff");
-const Department = require("../models/Department");
 
 
 exports.bulkUploadSpeciality = async (req, res) => {
@@ -46,7 +45,7 @@ exports.bulkUploadSpeciality = async (req, res) => {
       session.startTransaction();
 
       try {
-        await Speciality.insertMany(records, { session });
+        await Specialty.insertMany(records, { session });
         await session.commitTransaction();
         session.endSession();
 
