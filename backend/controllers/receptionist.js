@@ -22,9 +22,9 @@ const generatePatientId = () => {
 
 const registerPatientHandler = async (req, res) => {
     try {
-        const { fullName, dob, gender, contactNumber, email, address, relatives } = req.body;
+        const { fullName, dob, gender, contactNumber, email, address, aadhaarNumber,relatives } = req.body;
 
-        if (!fullName || !dob || !gender || !contactNumber || !address || !relatives || !email) {
+        if (!fullName || !dob || !gender || !contactNumber || !address || !relatives || !email || !aadhaarNumber) {
             return res.status(400).json({ message: 'Required fields are missing.' });
         }
 
@@ -42,7 +42,8 @@ const registerPatientHandler = async (req, res) => {
             contactNumber,
             email,
             address,
-            relatives
+            relatives,
+             aadhaarNumber
         });
 
         await patient.save();

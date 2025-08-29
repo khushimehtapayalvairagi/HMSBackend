@@ -121,10 +121,11 @@ exports.addPaymentToBill = async (req, res) => {
 
     const payment = new Payment({
       bill_id_ref, amount_paid, payment_method,
-      external_reference_number, received_by_user_id_ref
+      external_reference_number,
+       received_by_user_id_ref
     });
     await payment.save();
-
+    await payment.populate('received_by_user_id_ref', 'name role');
     res.status(201).json({ message: 'Payment recorded.', payment, updatedBill: bill });
   } catch (err) {
     console.error(err);
