@@ -14,6 +14,7 @@ const PatientSchema = new mongoose.Schema({
     contactNumber: { type: String, required: true },
     email: { type: String, required:true},
     address: { type: String, required: true },
+      aadhaarNumber: { type: String, unique: true },
     relatives: { type: [RelativeSchema], validate: [relativesLimit, '{PATH} exceeds the limit of 3'], required:true },
     status: { type: String, enum: ['Inactive','Active', ], default: 'Inactive' }
 }, { timestamps: true });
