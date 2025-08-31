@@ -570,7 +570,7 @@ const deleteUserHandler = async (req, res) => {
       const staff = await Staff.findById(id);
       if (!staff) return res.status(404).json({ message: 'Staff not found.' });
 
-      // Soft delete staff + user
+      
       staff.isActive = false;
       await staff.save();
 
