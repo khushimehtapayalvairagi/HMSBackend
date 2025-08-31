@@ -44,6 +44,7 @@ const registerPatientHandler = async (req, res) => {
             address,
             relatives
         });
+        console.log(patient);
 
         await patient.save();
 

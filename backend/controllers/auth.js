@@ -67,6 +67,7 @@ const loginHandler = async (req, res) => {
       token,
       user: {
         id: finalId,
+        userId:user._id,
         name: user.name,
         email: user.email,
         role: user.role,

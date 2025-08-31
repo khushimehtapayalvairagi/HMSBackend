@@ -127,7 +127,6 @@ exports.bulkUploadDepartment = async (req, res) => {
       res.status(500).json({ message: "Error processing file" });
     });
 };
-
 exports.bulkUploadDoctors = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
