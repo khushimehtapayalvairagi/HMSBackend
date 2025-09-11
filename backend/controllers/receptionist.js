@@ -19,41 +19,64 @@ const generatePatientId = () => {
 
     return `HSP${year}${month}${day}${hours}${minutes}${seconds}`;
 };
-
 const registerPatientHandler = async (req, res) => {
-    try {
-        const { fullName, dob, gender, contactNumber, email, address, aadhaarNumber,relatives } = req.body;
+  try {
+    const {
+      fullName,
+      gender,
+      age,
+      address,
+      dob,
+      contactNumber,
+      email,
+      aadhaarNumber,
+      relatives,
+    } = req.body;
 
-        if (!fullName || !dob || !gender || !contactNumber || !address || !relatives || !email || !aadhaarNumber) {
-            return res.status(400).json({ message: 'Required fields are missing.' });
-        }
-
-        if (relatives && relatives.length > 3) {
-            return res.status(400).json({ message: 'Maximum of 3 relatives allowed.' });
-        }
-
-        const patientId =  generatePatientId();
-
-        const patient = new Patient({
-            patientId,
-            fullName,
-            dob,
-            gender,
-            contactNumber,
-            email,
-            address,
-            relatives,
-             aadhaarNumber
-        });
-
-        await patient.save();
-
-        res.status(201).json({ message: 'Patient registered successfully.', patient });
-    } catch (error) {
-        console.error('Register Patient Error:', error);
-        res.status(500).json({ message: 'Server error.' });
+    // ✅ Required only these 4
+    if (!fullName || !gender || !age || !address) {
+      return res.status(400).json({ message: "Name, Gender, Age, and Address are required." });
     }
+
+    // ✅ Validate optional contact number
+    if (contactNumber && contactNumber.length !== 10) {
+      return res.status(400).json({ message: "Contact number must be exactly 10 digits." });
+    }
+
+    // ✅ Validate optional Aadhaar
+    if (aadhaarNumber && aadhaarNumber.length !== 12) {
+      return res.status(400).json({ message: "Aadhaar number must be exactly 12 digits." });
+    }
+
+    // ✅ Max 3 relatives
+    if (relatives && relatives.length > 3) {
+      return res.status(400).json({ message: "Maximum of 3 relatives allowed." });
+    }
+
+    const patientId = generatePatientId();
+
+    const patient = new Patient({
+      patientId,
+      fullName,
+      dob, // optional
+      age,
+      gender,
+      contactNumber, // optional
+      email, // optional
+      address,
+      aadhaarNumber, // optional
+      relatives: relatives || [],
+    });
+
+    await patient.save();
+
+    res.status(201).json({ message: "Patient registered successfully.", patient });
+  } catch (error) {
+    console.error("Register Patient Error:", error);
+    res.status(500).json({ message: "Server error." });
+  }
 };
+
 
 const getAllPatientsHandler = async (req, res) => {
     try {
@@ -84,8 +107,8 @@ const getPatientByIdHandler = async (req, res) => {
 
 const getAvailableDoctorsHandler = async (req, res) => {
   try {
-    const { specialtyName, dayOfWeek } = req.body;
-    if (!specialtyName || !dayOfWeek) {
+    const { specialtyName } = req.body;
+    if (!specialtyName ) {
       return res.status(400).json({ message: 'specialtyName and dayOfWeek are required in the body.' });
     }
 
@@ -96,14 +119,19 @@ const getAvailableDoctorsHandler = async (req, res) => {
 
     const doctors = await Doctor.find({
       specialty: specialty._id,
-      schedule: {
-        $elemMatch: {
-          dayOfWeek,
-          isAvailable: true,
-        },
-      },
+      isAvailable: true,
+       isActive: true,
+        "schedule.isAvailable": true
+      // schedule: {
+      //   $elemMatch: {
+      //     dayOfWeek,
+      //     isAvailable: true,
+      //   },
+      // },
     }).populate('userId', 'name email');
-
+  if (!doctors || doctors.length === 0) {
+      return res.status(200).json({ doctors: [], message: "No doctors available." });
+    }
     res.status(200).json({ doctors });
   } catch (error) {
     console.error('Fetch Doctors Error:', error);

@@ -9,13 +9,20 @@ const RelativeSchema = new mongoose.Schema({
 const PatientSchema = new mongoose.Schema({
     patientId: { type: String, unique: true, required: true },
     fullName: { type: String, required: true },
-    dob: { type: Date, required: true },
+    age: { type: String, required: true },
+     dob: { type: Date, required: false },
     gender: { type: String, enum: ['Male', 'Female', 'Other'], required: true },
-    contactNumber: { type: String, required: true },
-    email: { type: String, required:true},
+      contactNumber: { type: String, required: false }, // ⬅️ make optional
+    email: { type: String, required: false },
     address: { type: String, required: true },
-      aadhaarNumber: { type: String, unique: true },
-    relatives: { type: [RelativeSchema], validate: [relativesLimit, '{PATH} exceeds the limit of 3'], required:true },
+    aadhaarNumber: {
+  type: String,
+  required: false,
+  sparse: true,   // ✅ only enforce uniqueness when value exists
+  unique: true
+},
+
+    relatives: { type: [RelativeSchema], validate: [relativesLimit, '{PATH} exceeds the limit of 3'], required:false },
     status: { type: String, enum: ['Inactive','Active', ], default: 'Inactive' }
 }, { timestamps: true });
 
