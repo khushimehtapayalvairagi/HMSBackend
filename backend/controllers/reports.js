@@ -1,5 +1,5 @@
 const OPDConsultation = require('../models/OPDConsultation');
-const Doctor = require('../models/Doctor');
+const Doctor = require('../models/doctor');
 const Patient = require('../models/Patient');
 const IPDAdmission = require('../models/IPDAdmission');
 const ProcedureSchedule = require('../models/ProcedureSchedule');

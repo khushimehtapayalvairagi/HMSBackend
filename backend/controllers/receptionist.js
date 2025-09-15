@@ -1,7 +1,7 @@
 const Patient = require('../models/Patient');
 const Visit = require('../models/Visit');
 const ReferralPartner = require('../models/ReferralPartner');
-const Doctor = require('../models/Doctor');
+const Doctor = require('../models/doctor');
 const Specialty = require('../models/Specialty')
 const ProcedureSchedule = require('../models/ProcedureSchedule');
 

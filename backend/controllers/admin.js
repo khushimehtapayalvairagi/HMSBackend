@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const User = require('../models/User'); 
+const User = require('../models/user'); 
 const Department = require('../models/Department');
 const Specialty = require('../models/Specialty')
 const RoomCategory = require('../models/Room');
@@ -7,7 +7,7 @@ const Ward = require('../models/Ward');
 const LabourRoom = require('../models/LabourRoom');
 const Procedure = require('../models/Procedure');
 const ManualChargeItem = require('../models/ManualChargeItem');
-const Doctor = require('../models/Doctor');
+const Doctor = require('../models/doctor');
 const Staff = require('../models/Staff');
 const ReferralPartner = require('../models/ReferralPartner');
 const OperationTheater = require('../models/OperationTheater');

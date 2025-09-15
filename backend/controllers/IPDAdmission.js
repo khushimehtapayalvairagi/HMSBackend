@@ -5,7 +5,7 @@ const DailyProgressReport = require('../models/DailyProgressReport');
 const Ward = require('../models/Ward');
 const Patient = require('../models/Patient');
 const Visit = require('../models/Visit');
-const Doctor = require('../models/Doctor');
+const Doctor = require('../models/doctor');
 const Bill = require('../models/Bill');
 
 
