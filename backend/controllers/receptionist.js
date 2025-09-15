@@ -19,63 +19,58 @@ const generatePatientId = () => {
 
     return `HSP${year}${month}${day}${hours}${minutes}${seconds}`;
 };
+
 const registerPatientHandler = async (req, res) => {
   try {
-    const {
-      fullName,
-      gender,
-      age,
-      address,
-      dob,
-      contactNumber,
-      email,
-      aadhaarNumber,
-      relatives,
-    } = req.body;
+    const { fullName, gender, age, address, dob, contactNumber, email, aadhaarNumber, relatives } = req.body;
 
-    // ✅ Required only these 4
+    // Required fields
     if (!fullName || !gender || !age || !address) {
       return res.status(400).json({ message: "Name, Gender, Age, and Address are required." });
     }
 
-    // ✅ Validate optional contact number
+    // Optional validations
     if (contactNumber && contactNumber.length !== 10) {
       return res.status(400).json({ message: "Contact number must be exactly 10 digits." });
     }
 
-    // ✅ Validate optional Aadhaar
     if (aadhaarNumber && aadhaarNumber.length !== 12) {
       return res.status(400).json({ message: "Aadhaar number must be exactly 12 digits." });
     }
 
-    // ✅ Max 3 relatives
     if (relatives && relatives.length > 3) {
       return res.status(400).json({ message: "Maximum of 3 relatives allowed." });
     }
 
-    const patientId = generatePatientId();
+    const patientId = generatePatientId(); // your function
 
-    const patient = new Patient({
+    const patientData = {
       patientId,
       fullName,
-      dob, // optional
+      dob: dob || null,
       age,
       gender,
-      contactNumber, // optional
-      email, // optional
+      contactNumber: contactNumber || null,
+      email: email || null,
       address,
-      aadhaarNumber, // optional
-      relatives: relatives || [],
-    });
+      aadhaarNumber: aadhaarNumber?.trim() || undefined, // undefined avoids null conflicts
+      relatives: relatives?.length ? relatives : []
+    };
 
+    const patient = new Patient(patientData);
     await patient.save();
 
     res.status(201).json({ message: "Patient registered successfully.", patient });
+
   } catch (error) {
     console.error("Register Patient Error:", error);
+    if (error.code === 11000) {
+      return res.status(400).json({ message: "Duplicate Aadhaar number detected." });
+    }
     res.status(500).json({ message: "Server error." });
   }
 };
+
 
 
 const getAllPatientsHandler = async (req, res) => {

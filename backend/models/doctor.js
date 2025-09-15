@@ -19,8 +19,8 @@ const DoctorSchema = new mongoose.Schema({
     isAvailable: { type: Boolean, default: true }
   }],
 
-  isAvailable: { type: Boolean, default: false }, // doctor login/logout availability
-  isActive: { type: Boolean, default: true }
+  // isAvailable: { type: Boolean, default: false }, // doctor login/logout availability
+  // isActive: { type: Boolean, default: true }
 });
 
 module.exports = mongoose.model('Doctor', DoctorSchema);
