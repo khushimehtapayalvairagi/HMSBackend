@@ -1,5 +1,5 @@
 const User = require('../models/user');
-const Doctor = require('../models/Doctor');
+const Doctor = require('../models/doctor');
 const bcrypt = require('bcrypt');
 const Staff = require('../models/Staff');
 const { setUser } = require("../utils/auth");
