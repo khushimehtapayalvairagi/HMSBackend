@@ -4,8 +4,8 @@ const mongoose = require("mongoose");
 const Specialty = require("../models/Specialty");
 const Department = require("../models/Department");
 const bcrypt = require("bcryptjs");
-const User = require("../models/user");
-const Doctor = require("../models/doctor");
+const User = require("../models/User");
+const Doctor = require("../models/Doctor");
 const Staff = require("../models/Staff");
 
 

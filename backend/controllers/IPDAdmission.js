@@ -5,67 +5,127 @@ const DailyProgressReport = require('../models/DailyProgressReport');
 const Ward = require('../models/Ward');
 const Patient = require('../models/Patient');
 const Visit = require('../models/Visit');
-const Doctor = require('../models/doctor');
+const Doctor = require('../models/Doctor');
 const Bill = require('../models/Bill');
 
 
 
-exports.createIPDAdmission = async (req, res) => {
+// exports.createIPDAdmission = async (req, res) => {
 
-   console.log('📥 IPDAdmission payload:', req.body);
+//    console.log('📥 IPDAdmission payload:', req.body);
 
-    try {
-        const { patientId, visitId, wardId, bedNumber, roomCategoryId,  admittingDoctorId: userDoctorId, expectedDischargeDate } = req.body;
+//     try {
+//         const { patientId, visitId, wardId, bedNumber, roomCategoryId,  admittingDoctorId: userDoctorId, expectedDischargeDate } = req.body;
 
-        if (!patientId || !visitId || !wardId || !bedNumber || !roomCategoryId || !userDoctorId) {
-            return res.status(400).json({ message: 'All fields are required.' });
-        }
-          const existingAdmission = await IPDAdmission.findOne({ patientId, status: 'Admitted' });
-    if (existingAdmission) {
-      return res.status(400).json({ message: 'Patient is already admitted and cannot be admitted again.' });
-    }
+//         if (!patientId || !visitId || !wardId || !bedNumber || !roomCategoryId || !userDoctorId) {
+//             return res.status(400).json({ message: 'All fields are required.' });
+//         }
+//           const existingAdmission = await IPDAdmission.findOne({ patientId, status: 'Admitted' });
+//     if (existingAdmission) {
+//       return res.status(400).json({ message: 'Patient is already admitted and cannot be admitted again.' });
+//     }
 
-        const [patient, visit, doctor, ward] = await Promise.all([
-            Patient.findById(patientId),
-            Visit.findById(visitId),
-            Doctor.findOne({_id:userDoctorId }),
-            Ward.findById(wardId)
-        ]);
+//         const [patient, visit, doctor, ward] = await Promise.all([
+//             Patient.findById(patientId),
+//             Visit.findById(visitId),
+//             Doctor.findOne({_id:userDoctorId }),
+//             Ward.findById(wardId)
+//         ]);
 
   
 
    
  
 
-    console.log({
-      patientExists: !!patient,
-      visitExists: !!visit,
-      doctorExists: !!doctor,
-      wardExists: !!ward
-    });
+//     console.log({
+//       patientExists: !!patient,
+//       visitExists: !!visit,
+//       doctorExists: !!doctor,
+//       wardExists: !!ward
+//     });
 
 
-        if (!patient || !visit || !doctor || !ward) {
-            return res.status(404).json({ message: 'Invalid reference: patient, visit, doctor, or ward not found.' });
-        }
+//         if (!patient || !visit || !doctor || !ward) {
+//             return res.status(404).json({ message: 'Invalid reference: patient, visit, doctor, or ward not found.' });
+//         }
 
-        const bed = ward.beds.find(b => b.bedNumber === bedNumber);
-        if (!bed || bed.status !== 'available') {
-            return res.status(400).json({ message: 'Bed is either not found or not available.' });
-        }
+//         const bed = ward.beds.find(b => b.bedNumber === bedNumber);
+//         if (!bed || bed.status !== 'available') {
+//             return res.status(400).json({ message: 'Bed is either not found or not available.' });
+//         }
 
         
-        bed.status = 'occupied';
-        await ward.save();
+//         bed.status = 'occupied';
+//         await ward.save();
+
+//         const admission = new IPDAdmission({
+//            patientId,
+            
+//             visitId,
+//             wardId,
+//             bedNumber,
+//             roomCategoryId,
+//            admittingDoctorId: userDoctorId,
+//             expectedDischargeDate
+//         });
+
+//         await admission.save();
+
+//         patient.status = 'Active';
+//         await patient.save();
+
+//         res.status(201).json({ message: 'IPD Admission successful.', admission });
+//     } catch (error) {
+//         console.error('IPD Admission Error:', error);
+//         res.status(500).json({ message: 'Server error.' });
+//     }
+// };
+
+
+exports.createIPDAdmission = async (req, res) => {
+    console.log('📥 IPDAdmission payload:', req.body);
+
+    try {
+        const { patientId, patientDbId, wardId, bedNumber, roomCategoryId, expectedDischargeDate } = req.body;
+
+        if (!patientId || !patientDbId || !wardId || !bedNumber || !roomCategoryId) {
+            return res.status(400).json({ message: 'All required fields must be filled.' });
+        }
+
+     const existingAdmission = await IPDAdmission.findOne({ 
+   patientDbId, 
+  status: 'Admitted' 
+});
+        if (existingAdmission) {
+            return res.status(400).json({ message: 'Patient is already admitted.' });
+        }
+
+        const [patient, ward] = await Promise.all([
+            Patient.findById(patientDbId),
+            Ward.findById(wardId)
+        ]);
+console.log({
+      patientExists: !!patient,
+      wardExists: !!ward
+    });
+        if (!patient || !ward) {
+            return res.status(404).json({ message: 'Invalid patient or ward.' });
+        }
+
+        const isOccupied = await IPDAdmission.findOne({ wardId, bedNumber, status: 'Admitted' });
+    if (isOccupied) {
+      return res.status(400).json({ message: 'Bed is not available.' });
+    }
+
+        // bed.status = 'occupied';
+        // await ward.save();
 
         const admission = new IPDAdmission({
-           patientId,
-            
-            visitId,
+            patientId,
+             patientDbId,
             wardId,
             bedNumber,
             roomCategoryId,
-           admittingDoctorId: userDoctorId,
             expectedDischargeDate
         });
 
@@ -82,23 +142,23 @@ exports.createIPDAdmission = async (req, res) => {
 };
 
 exports.getIPDAdmissionsByPatient = async (req, res) => {
+  try {
+    const { patientId } = req.params; // this is actually patientDbId
 
-    try {
-        const { patientId } = req.params;
-        const admissions = await IPDAdmission.find({ patientId })
-        .populate('patientId', 'fullName')
-        .populate('visitId')  
-            .populate( 'wardId roomCategoryId')
-            .populate({
-    path: 'admittingDoctorId',
-    populate: { path: 'userId', select: 'name' }
-  });
-        res.status(200).json({ admissions });
-    } catch (error) {
-        res.status(500).json({ message: 'Server error.' });
-    }
+    const admissions = await IPDAdmission.find({
+      patientDbId: patientId,
+      status: 'Admitted'
+    })
+      .populate('patientDbId', 'fullName')
+      .populate('wardId', 'name')
+      .populate('roomCategoryId', 'name');
+
+    res.status(200).json({ admissions });
+  } catch (error) {
+    console.error('Error fetching admissions:', error);
+    res.status(500).json({ message: 'Server error.' });
+  }
 };
-
 
 
 
@@ -132,7 +192,8 @@ exports.dischargeIPDAdmission = async (req, res) => {
     admission.actualDischargeDate = new Date();
     await admission.save();
 
-    await Patient.findByIdAndUpdate(admission.patientId, { status: 'Discharged' });
+   await Patient.findByIdAndUpdate(admission.patientDbId, { status: 'Discharged' });
+
 
     res.status(200).json({ message: 'Patient discharged successfully.' });
   } catch (error) {

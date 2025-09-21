@@ -4,7 +4,7 @@ const cookieParser = require('cookie-parser');
 const { connectDB } = require('./utils/config');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const { setupSocket } = require('./utils/sockets'); 
+// const { setupSocket } = require('./utils/sockets'); 
 const { restrictToLoggedInUserOnly, restrictTo, restrictToDesignation } = require('./middlewares/auth');
 dotenv.config();
 
@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 8000;
 const app = express();
 const server = http.createServer(app); 
 
-setupSocket(server); 
+// setupSocket(server); 
 
 app.use(express.json());
 app.use(cookieParser());
@@ -57,7 +57,7 @@ app.use('/api/billing', restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'RECEPT
 app.use('/api/admin', restrictToLoggedInUserOnly, restrictTo(['ADMIN']), bulkUpload);
 app.use('/api/admin',restrictToLoggedInUserOnly,restrictTo(['ADMIN']),AdminHandler);
 app.use('/api/receptionist',restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'STAFF']),restrictToDesignation(['Receptionist',"Head Nurse"]),ReceptionistHandler);
-app.use('/api/doctor', restrictToLoggedInUserOnly,restrictTo(['ADMIN', 'DOCTOR']),doctorHandler);
+// app.use('/api/doctor', restrictToLoggedInUserOnly,restrictTo(['ADMIN', 'DOCTOR']),doctorHandler);
 app.use('/api/ipd', restrictToLoggedInUserOnly,restrictTo(['ADMIN', 'DOCTOR', 'STAFF']), restrictToDesignation(['Receptionist', 'Head Nurse']),ipdHandler);
 app.use('/api/procedures',restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'DOCTOR', 'STAFF']), restrictToDesignation(['Receptionist', 'Head Nurse']),procedure);
 app.use('/api/inventory',restrictToLoggedInUserOnly,restrictTo(['ADMIN', 'STAFF']),restrictToDesignation(['Inventory Manager']),inventoryManager);
