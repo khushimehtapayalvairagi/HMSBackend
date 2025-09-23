@@ -14,10 +14,9 @@ const OperationTheater = require('../models/OperationTheater');
 const IPDAdmission = require('../models/IPDAdmission');
 const bcrypt = require('bcrypt');
 
-
 const registerHandler = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  // const session = await mongoose.startSession();
+  // session.startTransaction();
 
   try {
     const {
@@ -56,13 +55,13 @@ const registerHandler = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const newUser = new User({
+    const newUser = await User.create({
       name,
       email,
       password: hashedPassword,
       role,
     });
-    await newUser.save({ session });
+    // await newUser.save({ session });
 
   
     if (role.toUpperCase() === 'DOCTOR') {
@@ -81,36 +80,45 @@ const registerHandler = async (req, res) => {
     throw new Error(`Department not found.`);
   }
 
-      if (!Array.isArray(schedule) || schedule.length === 0) {
-        throw new Error('Schedule must be a non-empty array.');
-      }
+      // if (!Array.isArray(schedule) || schedule.length === 0) {
+      //   throw new Error('Schedule must be a non-empty array.');
+      // }
 
-      const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-      for (const entry of schedule) {
-        const { dayOfWeek, startTime, endTime, isAvailable } = entry;
-        if (!validDays.includes(dayOfWeek) || !startTime || !endTime || typeof isAvailable !== 'boolean') {
-          throw new Error('Invalid schedule entry.');
-        }
-      }
+      // const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      // for (const entry of schedule) {
+      //   const { dayOfWeek, startTime, endTime, isAvailable } = entry;
+      //   if (!validDays.includes(dayOfWeek) || !startTime || !endTime || typeof isAvailable !== 'boolean') {
+      //     throw new Error('Invalid schedule entry.');
+      //   }
+      // }
 
    
       const existingDoctor = await Doctor.findOne({ userId: newUser._id });
       if (existingDoctor) {
         throw new Error('Doctor already exists for this user.');
       }
+      const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const fullWeekSchedule = allDays.map(day => ({
+    dayOfWeek: day,
+    startTime: '00:00',
+    endTime: '23:59',
+    isAvailable: true
+  }));
 
-      const doctor = new Doctor({
+
+      const doctor =  await Doctor.create ({
         userId: newUser._id,
         doctorType,
         specialty: specialtyData._id,
             department: departmentData._id,
         medicalLicenseNumber,
-        schedule,
+        // schedule,
+         schedule: fullWeekSchedule
       });
 
-      await doctor.save({ session });
+      // await doctor.save({ session });
 
-      await session.commitTransaction();
+      // await session.commitTransaction();
       return res.status(201).json({
         message: 'Doctor registered successfully with schedule.',
         userId: newUser._id,
@@ -139,16 +147,16 @@ const registerHandler = async (req, res) => {
       throw new Error('Staff already exists for this user.');
     }
 
-    const staff = new Staff({
+    const staff = await Staff.create({
       userId: newUser._id,
       contactNumber,
       designation,
       department: departmentId,
     });
 
-    await staff.save({ session });
+    // await staff.save({ session });
 
-    await session.commitTransaction();
+    // await session.commitTransaction();
     return res.status(201).json({
       message: 'Staff registered successfully.',
       userId: newUser._id,
@@ -156,10 +164,10 @@ const registerHandler = async (req, res) => {
     });
   } catch (error) {
     console.error('Registration error:', error.message);
-    await session.abortTransaction();
+    // await session.abortTransaction();
     return res.status(400).json({ message: error.message });
   } finally {
-    session.endSession();
+    // session.endSession();
   }
 };
 

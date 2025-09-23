@@ -1,13 +1,14 @@
 const express = require("express");
 const {registerPatientHandler,getAllPatientsHandler,getPatientByIdHandler,createVisitHandler,getVisitsByPatientHandler
         ,updateVisitStatusHandler,getAvailableDoctorsHandler,getActivePatientsHandler,getUnbilledProceduresForPatientHandler}= require("../controllers/receptionist")
-const{getAllSpecialtiesHandler, getAllProceduresHandler,getAllWardsHandler,getAllOperationTheatersHandler,getAllRoomCategoriesHandler,getAllReferralPartnersHandler, getAllDoctorsHandler,getAllLabourRoomsHandler} = require("../controllers/admin")
+const{getAllSpecialtiesHandler, getAllProceduresHandler,getAllWardsHandler,getAllOperationTheatersHandler,getAllRoomCategoriesHandler,getAllReferralPartnersHandler, getAllDoctorsHandler,getAllLabourRoomsHandler,getAllDepartmentsHandler} = require("../controllers/admin")
         const router = express.Router();
 
 router.post('/patients', registerPatientHandler);
 router.get('/patients', getAllPatientsHandler);
 router.get('/patients/:id', getPatientByIdHandler);
 router.get('/specialties', getAllSpecialtiesHandler);
+router.get('/departments',getAllDepartmentsHandler);
 router.post('/doctors', getAvailableDoctorsHandler);
 router.post('/visits',  createVisitHandler);
 router.get('/visits/:patientId',  getVisitsByPatientHandler);

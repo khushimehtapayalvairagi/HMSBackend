@@ -21,41 +21,55 @@ const generatePatientId = () => {
 };
 
 const registerPatientHandler = async (req, res) => {
-    try {
-        const { fullName, dob, gender, contactNumber, email, address, aadhaarNumber,relatives } = req.body;
+  try {
+    const { fullName, gender, age, address, dob, contactNumber, email, aadhaarNumber, relatives } = req.body;
 
-        if (!fullName || !dob || !gender || !contactNumber || !address || !relatives || !email || !aadhaarNumber) {
-            return res.status(400).json({ message: 'Required fields are missing.' });
-        }
-
-        if (relatives && relatives.length > 3) {
-            return res.status(400).json({ message: 'Maximum of 3 relatives allowed.' });
-        }
-
-        const patientId =  generatePatientId();
-
-        const patient = new Patient({
-            patientId,
-            fullName,
-            dob,
-            gender,
-            contactNumber,
-            email,
-            address,
-            relatives,
-             aadhaarNumber
-        });
-        console.log(patient);
-
-        await patient.save();
-
-        res.status(201).json({ message: 'Patient registered successfully.', patient });
-    } catch (error) {
-        console.error('Register Patient Error:', error);
-        res.status(500).json({ message: 'Server error.' });
+    // Required fields
+    if (!fullName || !gender || !age || !address) {
+      return res.status(400).json({ message: "Name, Gender, Age, and Address are required." });
     }
-};
 
+    // Optional validations
+    if (contactNumber && contactNumber.length !== 10) {
+      return res.status(400).json({ message: "Contact number must be exactly 10 digits." });
+    }
+
+    if (aadhaarNumber && aadhaarNumber.length !== 12) {
+      return res.status(400).json({ message: "Aadhaar number must be exactly 12 digits." });
+    }
+
+    if (relatives && relatives.length > 3) {
+      return res.status(400).json({ message: "Maximum of 3 relatives allowed." });
+    }
+
+    const patientId = generatePatientId(); // your function
+
+    const patientData = {
+      patientId,
+      fullName,
+      dob: dob || null,
+      age,
+      gender,
+      contactNumber: contactNumber || null,
+      email: email || null,
+      address,
+      aadhaarNumber: aadhaarNumber?.trim() || undefined, // undefined avoids null conflicts
+      relatives: relatives?.length ? relatives : []
+    };
+
+    const patient = new Patient(patientData);
+    await patient.save();
+
+    res.status(201).json({ message: "Patient registered successfully.", patient });
+
+  } catch (error) {
+    console.error("Register Patient Error:", error);
+    if (error.code === 11000) {
+      return res.status(400).json({ message: "Duplicate Aadhaar number detected." });
+    }
+    res.status(500).json({ message: "Server error." });
+  }
+};
 const getAllPatientsHandler = async (req, res) => {
     try {
         const patients = await Patient.find();
@@ -83,10 +97,11 @@ const getPatientByIdHandler = async (req, res) => {
     }
 };
 
+
 const getAvailableDoctorsHandler = async (req, res) => {
   try {
-    const { specialtyName, dayOfWeek } = req.body;
-    if (!specialtyName || !dayOfWeek) {
+    const { specialtyName } = req.body;
+    if (!specialtyName ) {
       return res.status(400).json({ message: 'specialtyName and dayOfWeek are required in the body.' });
     }
 
@@ -97,14 +112,19 @@ const getAvailableDoctorsHandler = async (req, res) => {
 
     const doctors = await Doctor.find({
       specialty: specialty._id,
-      schedule: {
-        $elemMatch: {
-          dayOfWeek,
-          isAvailable: true,
-        },
-      },
+      isAvailable: true,
+      //  isActive: true,
+        "schedule.isAvailable": true
+      // schedule: {
+      //   $elemMatch: {
+      //     dayOfWeek,
+      //     isAvailable: true,
+      //   },
+      // },
     }).populate('userId', 'name email');
-
+  if (!doctors || doctors.length === 0) {
+      return res.status(200).json({ doctors: [], message: "No doctors available." });
+    }
     res.status(200).json({ doctors });
   } catch (error) {
     console.error('Fetch Doctors Error:', error);
@@ -112,75 +132,41 @@ const getAvailableDoctorsHandler = async (req, res) => {
   }
 };
 
-
 const createVisitHandler = async (req, res) => {
-    try {
-        const { patientId, visitType, referredBy, assignedDoctorId, payment } = req.body;
-        // console.log(assignedDoctorId);
-        if (!patientId || !visitType || !assignedDoctorId) {
-            return res.status(400).json({ message: 'patientId, visitType, and assignedDoctorId are required.' });
-        }
+  try {
+    const { patientId, patientDbId, visitType, assignedDoctorId, referredBy, payment } = req.body;
 
-      
-        if (visitType === 'OPD') {
-            if (!payment || typeof payment.amount !== 'number' || payment.amount <= 0 || payment.isPaid !== true) {
-                return res.status(400).json({ message: 'Valid payment details are required for OPD visits and payment must be marked as paid.' });
-            }
-        }
+    // generate receipt number based on date + count
+    const today = new Date().toISOString().slice(0,10).replace(/-/g,""); // 20250923
+    const countToday = await Visit.countDocuments({
+      createdAt: {
+        $gte: new Date().setHours(0,0,0,0),
+        $lt: new Date().setHours(23,59,59,999)
+      }
+    });
 
-        const patient = await Patient.findOne({ patientId: patientId.trim() });
-        if (!patient) {
-            return res.status(404).json({ message: 'Patient not found.' });
-        }
-        const doctor = await Doctor.findOne({_id: assignedDoctorId}).populate('userId','name');
-        let referralPartnerId = null;
+    const receiptNumber = `${today}-${String(countToday + 1).padStart(3, '0')}`;
+const doctor = await Doctor.findById(assignedDoctorId).populate('userId', 'name');
+    const visit = new Visit({
+      patientId,
+      patientDbId,
+      visitType,
+      assignedDoctorId,
+      referredBy,
+      payment,
+      receiptNumber,
+        doctorName: doctor.userId.name,
 
-       
-        if (visitType === 'IPD_Referral') {
-            if (!referredBy) {
-                return res.status(400).json({ message: 'Referral Partner is required for IPD_Referral visits.' });
-            }
+    });
 
-            const referralPartner = await ReferralPartner.findOne({ name: referredBy.trim() });
-            if (!referralPartner) {
-                return res.status(404).json({ message: `Referral Partner '${referredBy}' not found.` });
-            }
-
-            referralPartnerId = referralPartner._id;
-        }
-
-       
-        if ((visitType === 'OPD' || visitType === 'IPD_Admission') && referredBy) {
-            const referralPartner = await ReferralPartner.findOne({ name: referredBy.trim() });
-            if (!referralPartner) {
-                return res.status(404).json({ message: `Referral Partner '${referredBy}' not found.` });
-            }
-
-            referralPartnerId = referralPartner._id;
-        }
-        const newVisit = new Visit({
-            patientId: patient.patientId, 
-            patientDbId: patient._id,    
-            visitType,
-            referredBy: referralPartnerId,
-            assignedDoctorId:  assignedDoctorId,
-            payment: visitType === 'OPD' ? payment : undefined
-        });
-
-        await newVisit.save();
-   
-        const newVisitObject = newVisit.toObject();
-        res.status(201).json({ message: 'Visit created successfully.', visit: 
-            { patientName:patient.fullName,
-              doctorName:doctor.userId.name,
-              ...newVisitObject
-            } 
-        });
-    } catch (error) {
-        console.error('Create Visit Error:', error);
-        res.status(500).json({ message: 'Server error.' });
-    }
+    await visit.save();
+    res.status(201).json({ message: "Visit created", visit });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error creating visit" });
+  }
 };
+
 
 const getVisitsByPatientHandler = async (req, res) => {
     try {

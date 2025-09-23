@@ -15,19 +15,22 @@ exports.createIPDAdmission = async (req, res) => {
    console.log('📥 IPDAdmission payload:', req.body);
 
     try {
-        const { patientId, visitId, wardId, bedNumber, roomCategoryId,  admittingDoctorId: userDoctorId, expectedDischargeDate } = req.body;
+        const { patientId, wardId, bedNumber, roomCategoryId,  admittingDoctorId: userDoctorId, expectedDischargeDate } = req.body;
 
-        if (!patientId || !visitId || !wardId || !bedNumber || !roomCategoryId || !userDoctorId) {
+        if (!patientId  || !wardId || !bedNumber || !roomCategoryId || !userDoctorId) {
             return res.status(400).json({ message: 'All fields are required.' });
         }
+        const wardCheck = await Ward.findById(wardId);
+        console.log('WardId from request:', wardId);
+        console.log('Ward found in DB:', wardCheck);
+
           const existingAdmission = await IPDAdmission.findOne({ patientId, status: 'Admitted' });
     if (existingAdmission) {
       return res.status(400).json({ message: 'Patient is already admitted and cannot be admitted again.' });
     }
 
-        const [patient, visit, doctor, ward] = await Promise.all([
+        const [patient,doctor, ward] = await Promise.all([
             Patient.findById(patientId),
-            Visit.findById(visitId),
             Doctor.findOne({_id:userDoctorId }),
             Ward.findById(wardId)
         ]);
@@ -39,13 +42,13 @@ exports.createIPDAdmission = async (req, res) => {
 
     console.log({
       patientExists: !!patient,
-      visitExists: !!visit,
+      // visitExists: !!visit,
       doctorExists: !!doctor,
       wardExists: !!ward
     });
 
 
-        if (!patient || !visit || !doctor || !ward) {
+        if (!patient || !doctor || !ward) {
             return res.status(404).json({ message: 'Invalid reference: patient, visit, doctor, or ward not found.' });
         }
 
@@ -61,7 +64,7 @@ exports.createIPDAdmission = async (req, res) => {
         const admission = new IPDAdmission({
            patientId,
             
-            visitId,
+            // visitId,
             wardId,
             bedNumber,
             roomCategoryId,
@@ -81,13 +84,15 @@ exports.createIPDAdmission = async (req, res) => {
     }
 };
 
+
 exports.getIPDAdmissionsByPatient = async (req, res) => {
 
     try {
         const { patientId } = req.params;
         const admissions = await IPDAdmission.find({ patientId })
-        .populate('patientId', 'fullName')
-        .populate('visitId')  
+       .populate('patientId', 'patientId fullName')
+
+        // .populate('visitId')  
             .populate( 'wardId roomCategoryId')
             .populate({
     path: 'admittingDoctorId',

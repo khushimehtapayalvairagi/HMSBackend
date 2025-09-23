@@ -9,7 +9,7 @@ const VisitSchema = new mongoose.Schema({
 
   assignedDoctorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Doctor' },
 
-
+  receiptNumber: { type: String, unique: true },
 
     visitDate: { type: Date, default: Date.now },
 

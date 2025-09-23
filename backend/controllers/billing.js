@@ -5,8 +5,8 @@ const ManualChargeItem = require('../models/ManualChargeItem');
 
 exports.createBill = async (req, res) => {
   try {
-    const { patient_id_ref, visit_id_ref, ipd_admission_id_ref, items, generated_by_user_id } = req.body;
-    if (!patient_id_ref || !items || !generated_by_user_id || !visit_id_ref || !ipd_admission_id_ref) {
+    const { patient_id_ref,ipd_admission_id_ref, items, generated_by_user_id } = req.body;
+    if (!patient_id_ref || !items || !generated_by_user_id  || !ipd_admission_id_ref) {
       return res.status(400).json({ message: 'Required fields missing.' });
     }
 
@@ -53,7 +53,7 @@ exports.createBill = async (req, res) => {
     }
 
     const bill = new Bill({
-      patient_id_ref, visit_id_ref, ipd_admission_id_ref,
+      patient_id_ref,ipd_admission_id_ref,
       items: processed, total_amount: total,
       balance_due: total, generated_by_user_id
     });
