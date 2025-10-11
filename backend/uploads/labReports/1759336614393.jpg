@@ -1,0 +1,26 @@
+==============================
+        LAB TEST REPORT
+==============================
+
+Patient Name : khushi
+Patient ID   : P12345
+Age          : 35
+Gender       : Male
+
+Test Type    : Complete Blood Count (CBC)
+Test Date    : 01-10-2025
+Status       : Completed
+
+Results:
+- Hemoglobin      : 14 g/dL
+- White Blood Cells: 7000 /µL
+- Platelets       : 250000 /µL
+
+Notes:
+- This is a demo report for testing purposes.
+- No abnormal findings observed.
+
+==============================
+Lab Technician: Jane Smith
+Lab Name       : ABC Diagnostic Center
+==============================

@@ -148,7 +148,7 @@ const createVisitHandler = async (req, res) => {
     const receiptNumber = `${today}-${String(countToday + 1).padStart(3, '0')}`;
 const doctor = await Doctor.findById(assignedDoctorId).populate('userId', 'name');
     const visit = new Visit({
-      patientId,
+   patientId: patientId.trim(),
       patientDbId,
       visitType,
       assignedDoctorId,
@@ -156,7 +156,7 @@ const doctor = await Doctor.findById(assignedDoctorId).populate('userId', 'name'
       payment,
       receiptNumber,
         doctorName: doctor.userId.name,
-
+         visitDate: new Date(),
     });
 
     await visit.save();
@@ -166,13 +166,31 @@ const doctor = await Doctor.findById(assignedDoctorId).populate('userId', 'name'
     res.status(500).json({ message: "Error creating visit" });
   }
 };
+const addPrescriptionHandler = async (req, res) => {
+  try {
+    const { visitId } = req.params;
+    const { consultationNotes, prescription } = req.body;
+
+    const visit = await Visit.findById(visitId);
+    if (!visit) return res.status(404).json({ message: 'Visit not found' });
+
+    if (consultationNotes) visit.consultationNotes = consultationNotes;
+    if (Array.isArray(prescription)) visit.prescription = prescription;
+
+    await visit.save();
+    res.status(200).json({ message: 'Prescription saved successfully', visit });
+  } catch (error) {
+    console.error('Prescription save error:', error);
+    res.status(500).json({ message: 'Error saving prescription' });
+  }
+};
 
 
 const getVisitsByPatientHandler = async (req, res) => {
     try {
         const { patientId } = req.params;
 
-        const visits = await Visit.find({ patientId: patientId })
+       const visits = await Visit.find({ patientId: patientId.trim() })
             .sort({ visitDate: -1 })
           
            .populate({
@@ -196,6 +214,40 @@ const getVisitsByPatientHandler = async (req, res) => {
         res.status(500).json({ message: 'Server error.' });
     }
 };
+// ✅ Get prescription by visit ID
+// ✅ Get all prescriptions for a specific patient
+const getPrescriptionsByPatientHandler = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+
+    const visits = await Visit.find({
+      patientId: patientId.trim(),
+      prescription: { $exists: true, $ne: [] }
+    })
+      .sort({ createdAt: -1 })
+      .populate({
+        path: 'assignedDoctorId',
+        populate: { path: 'userId', select: 'name email' },
+      })
+      .populate({
+        path: 'patientDbId',
+        select: 'fullName age gender patientId contactNumber address',
+      });
+
+    if (!visits.length) {
+      return res.status(404).json({ message: 'No prescriptions found for this patient.' });
+    }
+
+    res.status(200).json({
+      message: 'Patient prescriptions fetched successfully',
+      prescriptions: visits,
+    });
+  } catch (error) {
+    console.error('Fetch patient prescriptions error:', error);
+    res.status(500).json({ message: 'Error fetching prescriptions.' });
+  }
+};
+
 
 const updateVisitStatusHandler = async (req, res) => {
     try {
@@ -278,5 +330,5 @@ const getUnbilledProceduresForPatientHandler = async (req, res) => {
 
 
 
-module.exports = {registerPatientHandler,getAllPatientsHandler,getPatientByIdHandler,createVisitHandler,getVisitsByPatientHandler
-                ,updateVisitStatusHandler,getAvailableDoctorsHandler,getActivePatientsHandler,getUnbilledProceduresForPatientHandler}
+module.exports = {registerPatientHandler,getAllPatientsHandler,getPatientByIdHandler,createVisitHandler,getVisitsByPatientHandler, getPrescriptionsByPatientHandler
+                ,updateVisitStatusHandler,getAvailableDoctorsHandler,getActivePatientsHandler,getUnbilledProceduresForPatientHandler,addPrescriptionHandler}

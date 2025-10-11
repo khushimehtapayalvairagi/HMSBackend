@@ -9,13 +9,17 @@ function setUser(payload) {
 }
 
 function getUser(token){
-    if(!token) return null;
-    try {
-        return jwt.verify(token,secret);
-    } catch (error) {
-        return null;
-    }
+  if(!token) return null;
+  try {
+    const verified = jwt.verify(token, secret);
+    console.log("✅ Token verified:", verified);
+    return verified;
+  } catch (error) {
+    console.error("❌ Token verification failed:", error.message);
+    return null;
+  }
 }
+
 
 
 module.exports = {

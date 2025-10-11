@@ -4,13 +4,13 @@ const Staff = require('../models/Staff');
 
 async function restrictToLoggedInUserOnly(req,res,next){
     const userid = req.headers['authorization'];
-
+  console.log("🪶 Authorization Header:", userid);
     if(!userid) return res.status(404).json({
         message:"Token not found"
     })
 
-    const token = userid.split('Bearer ')[1]; 
-
+    // const token = userid.split('Bearer ')[1]; 
+         const token = userid.split(" ")[1]
     const user = getUser(token);
     
     if(!user) return res.status(404).json({

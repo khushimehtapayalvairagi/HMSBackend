@@ -171,6 +171,154 @@ const registerHandler = async (req, res) => {
   }
 };
 
+// const registerHandler = async (req, res) => {
+//   try {
+//     const {
+//       name,
+//       email,
+//       password,
+//       role,
+//       doctorType,
+//       specialty,
+//       medicalLicenseNumber,
+//       schedule,
+//       contactNumber,
+//       designation,
+//       department,
+//     } = req.body;
+
+//     const requesterRole = req.user.role;
+
+//     // Basic validations
+//     if (!name || !email || !password || !role) {
+//       throw new Error('Name, email, password, and role are required.');
+//     }
+
+//     if (requesterRole !== 'ADMIN') {
+//       throw new Error('Only Admin is allowed to register users.');
+//     }
+
+//     const existingUser = await User.findOne({ email });
+//     if (existingUser) {
+//       throw new Error('User with this email already exists.');
+//     }
+
+//     // Hash password
+//     const salt = await bcrypt.genSalt(10);
+//     const hashedPassword = await bcrypt.hash(password, salt);
+
+//     // Create user
+//     const newUser = await User.create({
+//       name,
+//       email,
+//       password: hashedPassword,
+//       role,
+//     });
+
+//     // ----- DOCTOR -----
+//     if (role.toUpperCase() === 'DOCTOR') {
+//       if (!doctorType || !specialty || !medicalLicenseNumber) {
+//         throw new Error('doctorType, specialty, and medicalLicenseNumber are required for Doctor.');
+//       }
+
+//       const specialtyData = await Specialty.findOne({
+//         name: new RegExp(`^${specialty.trim()}$`, 'i'),
+//       });
+//       if (!specialtyData) {
+//         throw new Error(`Specialty '${specialty}' not found.`);
+//       }
+
+//       if (!department) {
+//         throw new Error('Department is required for Doctor.');
+//       }
+
+//       const departmentData = await Department.findById(department);
+//       if (!departmentData) {
+//         throw new Error('Department not found.');
+//       }
+
+//       // Default full week schedule if none provided
+//       const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+//       const fullWeekSchedule = allDays.map(day => ({
+//         dayOfWeek: day,
+//         startTime: '00:00',
+//         endTime: '23:59',
+//         isAvailable: true
+//       }));
+
+//       const existingDoctor = await Doctor.findOne({ userId: newUser._id });
+//       if (existingDoctor) {
+//         throw new Error('Doctor already exists for this user.');
+//       }
+
+//       const doctor = await Doctor.create({
+//         userId: newUser._id,
+//         doctorType,
+//         specialty: specialtyData._id,
+//         department: departmentData._id,
+//         medicalLicenseNumber,
+//         schedule: fullWeekSchedule,
+//       });
+
+//       return res.status(201).json({
+//         message: 'Doctor registered successfully with schedule.',
+//         userId: newUser._id,
+//         doctorId: doctor._id,
+//       });
+//     }
+
+//     // ----- STAFF -----
+//     if (role.toUpperCase() === 'STAFF') {
+//       if (!contactNumber || !designation) {
+//         throw new Error('contactNumber and designation are required for Staff.');
+//       }
+
+//       let departmentId = null;
+//       if (department) {
+//         const departmentData = await Department.findOne({ name: department.trim() });
+//         if (!departmentData) {
+//           throw new Error(`Department '${department}' not found.`);
+//         }
+//         departmentId = departmentData._id;
+//       }
+
+//       const existingStaff = await Staff.findOne({ userId: newUser._id });
+//       if (existingStaff) {
+//         throw new Error('Staff already exists for this user.');
+//       }
+
+//       const staff = await Staff.create({
+//         userId: newUser._id,
+//         contactNumber,
+//         designation,
+//         department: departmentId,
+//       });
+
+//       return res.status(201).json({
+//         message: 'Staff registered successfully.',
+//         userId: newUser._id,
+//         staffId: staff._id,
+//       });
+//     }
+
+//     // ----- ADMIN -----
+//     if (role.toUpperCase() === 'ADMIN') {
+//       return res.status(201).json({
+//         message: 'Admin registered successfully.',
+//         userId: newUser._id,
+//       });
+//     }
+
+//     // Invalid role
+//     throw new Error('Invalid role specified.');
+//   } catch (error) {
+//     console.error('Registration error:', error.message);
+//     return res.status(400).json({ message: error.message });
+//   }
+// };
+
+
+
 const getAllUsersHandler = async (req, res) => {
     try {
        

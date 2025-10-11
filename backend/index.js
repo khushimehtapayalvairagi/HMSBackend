@@ -19,8 +19,8 @@ app.use(cookieParser());
 
 app.use(
   cors({
-    origin: ["https://uudra.in", "http://localhost:3000"],
-        // origin: [ "http://localhost:3000"],
+    // origin: ["https://uudra.in", "http://localhost:3000"],
+        origin: [ "http://localhost:3000"],
     credentials: true,
   })
 );
@@ -38,6 +38,7 @@ const inventoryManager = require('./routes/inventoryManager');
 const bulkUpload = require('./routes/bulkUpload');
 
 
+const labRoutes = require('./routes/Lab');
 
 const billingHandler = require('./routes/billing');
 
@@ -53,11 +54,12 @@ server.listen(PORT, () => {
 
 
 app.use('/api/auth', AuthHandler);
+app.use('/api/lab', labRoutes);
 
 app.use('/api/billing', restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'RECEPTIONIST', 'STAFF']), billingHandler);
 app.use('/api/admin', restrictToLoggedInUserOnly, restrictTo(['ADMIN']), bulkUpload);
 app.use('/api/admin',restrictToLoggedInUserOnly,restrictTo(['ADMIN']),AdminHandler);
-app.use('/api/receptionist',restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'STAFF']),restrictToDesignation(['Receptionist',"Head Nurse"]),ReceptionistHandler);
+app.use('/api/receptionist',restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'STAFF']),restrictToDesignation(['Receptionist',"Head Nurse","Lab Technician"]),ReceptionistHandler);
 app.use('/api/doctor', restrictToLoggedInUserOnly,restrictTo(['ADMIN', 'DOCTOR']),doctorHandler);
 app.use('/api/ipd', restrictToLoggedInUserOnly,restrictTo(['ADMIN', 'DOCTOR', 'STAFF']), restrictToDesignation(['Receptionist', 'Head Nurse']),ipdHandler);
 app.use('/api/procedures',restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'DOCTOR', 'STAFF']), restrictToDesignation(['Receptionist', 'Head Nurse']),procedure);
