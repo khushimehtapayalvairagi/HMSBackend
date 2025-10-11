@@ -21,7 +21,8 @@ app.use(
   cors({
     // origin: ["https://uudra.in", "http://localhost:3000"],
         // origin: [ "http://localhost:3000"],
-            origin: ["https://hms.kloudcrm.site"],
+          origin: ["https://hms.kloudcrm.site", "http://hms.kloudcrm.site", "https://www.hms.kloudcrm.site"],
+
 
         credentials: true,
   })
