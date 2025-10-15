@@ -48,7 +48,7 @@ const billingHandler = require('./routes/billing');
 const reports = require('./routes/reports');
 
 
-connectDB(process.env.MONGO_URI);
+connectDB(process.env.DATABASE_URL);
 
 
 server.listen(PORT, () => {
