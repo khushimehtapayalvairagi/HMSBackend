@@ -20,8 +20,8 @@ app.use(cookieParser());
 app.use(
   cors({
     // origin: ["https://uudra.in", "http://localhost:3000"],
-        origin: [ "http://localhost:3000"],
-          // origin: ["https://kloudcrm.site", "http://kloudcrm.site", "https://www.kloudcrm.site"],
+        // origin: [ "http://localhost:3000"],
+          origin: ["https://kloudcrm.site", "http://kloudcrm.site", "https://www.kloudcrm.site"],
 
 
         credentials: true,
