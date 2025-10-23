@@ -20,8 +20,8 @@ app.use(cookieParser());
 app.use(
   cors({
     // origin: ["https://uudra.in", "http://localhost:3000"],
-        // origin: [ "http://localhost:3000"],
-          origin: ["https://kloudcrm.site", "http://kloudcrm.site", "https://www.kloudcrm.site"],
+        origin: [ "http://localhost:3000"],
+          // origin: ["https://kloudcrm.site", "http://kloudcrm.site", "https://www.kloudcrm.site"],
 
 
         credentials: true,
@@ -60,7 +60,7 @@ app.use('/api/auth', AuthHandler);
 app.use('/api/lab', labRoutes);
 
 app.use('/api/billing', restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'RECEPTIONIST', 'STAFF']), billingHandler);
-app.use('/api/admin', restrictToLoggedInUserOnly, restrictTo(['ADMIN']), bulkUpload);
+app.use('/api/admin', restrictToLoggedInUserOnly, restrictTo(['ADMIN',"STAFF"]), bulkUpload);
 app.use('/api/admin',restrictToLoggedInUserOnly,restrictTo(['ADMIN']),AdminHandler);
 app.use('/api/receptionist',restrictToLoggedInUserOnly, restrictTo(['ADMIN', 'STAFF']),restrictToDesignation(['Receptionist',"Head Nurse","Lab Technician"]),ReceptionistHandler);
 app.use('/api/doctor', restrictToLoggedInUserOnly,restrictTo(['ADMIN', 'DOCTOR']),doctorHandler);

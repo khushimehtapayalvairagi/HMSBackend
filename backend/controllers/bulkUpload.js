@@ -1,341 +1,677 @@
 const fs = require("fs");
+const path = require("path");
 const csv = require("csv-parser");
+const xlsx = require("xlsx");
+const bcrypt = require("bcrypt");
 const mongoose = require("mongoose");
 const Specialty = require("../models/Specialty");
 const Department = require("../models/Department");
-const bcrypt = require("bcrypt");
 const User = require("../models/User");
 const Doctor = require("../models/Doctor");
 const Staff = require("../models/Staff");
+const LabourRoom = require("../models/LabourRoom");
+const RoomCategory = require('../models/Room');
+const Ward = require('../models/Ward');
+const Procedure = require('../models/Procedure');
+const ManualChargeItem = require('../models/ManualChargeItem');
+const ReferralPartner = require("../models/ReferralPartner");
 
 
-exports.bulkUploadSpeciality = async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ message: "No file uploaded" });
-  }
+const OperationTheater = require("../models/OperationTheater");
 
-  let records = [];
-  let errorRows = [];
-  let rowIndex = 1;
+const InventoryItem = require("../models/InventoryItems"); // adjust path
 
-  fs.createReadStream(req.file.path)
-    .pipe(csv())
-    .on("data", (row) => {
-      rowIndex++;
-      if (!row.name || !row.description) {
-        errorRows.push(rowIndex);
-      } else {
-        records.push({
-          name: row.name.trim(),
-          description: row.description.trim(),
-        });
-      }
-    })
-    .on("end", async () => {
-      fs.unlinkSync(req.file.path);
-
-      if (errorRows.length > 0) {
-        return res.status(400).json({
-          message: "Validation failed. Fix errors and try again.",
-          errorRows,
-        });
-      }
-
-      const session = await mongoose.startSession();
-      session.startTransaction();
-
-      try {
-        await Specialty.insertMany(records, { session });
-        await session.commitTransaction();
-        session.endSession();
-
-        res.json({
-          message: "Specialities uploaded successfully",
-          insertedCount: records.length,
-        });
-      } catch (err) {
-        await session.abortTransaction();
-        session.endSession();
-
-        res.status(500).json({
-          message: "Transaction failed. No records inserted.",
-          error: err.message,
-        });
-      }
-    })
-    .on("error", (err) => {
-      res.status(500).json({ message: "Error processing file" });
-    });
-};
+// Utility to parse Excel or CSV
 
 
-exports.bulkUploadDepartment = async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ message: "No file uploaded" });
-  }
-
-  let records = [];
-  let errorRows = [];
-  let rowIndex = 1;
-
-  fs.createReadStream(req.file.path)
-    .pipe(csv())
-    .on("data", (row) => {
-      rowIndex++;
-      if (!row.name || !row.description) {
-        errorRows.push(rowIndex);
-      } else {
-        records.push({
-          name: row.name.trim(),
-          description: row.description.trim(),
-        });
-      }
-    })
-    .on("end", async () => {
-      fs.unlinkSync(req.file.path);
-
-      if (errorRows.length > 0) {
-        return res.status(400).json({
-          message: "Validation failed. Fix errors and try again.",
-          errorRows,
-        });
-      }
-
-      const session = await mongoose.startSession();
-      session.startTransaction();
-
-      try {
-        await Department.insertMany(records, { session });
-        await session.commitTransaction();
-        session.endSession();
-
-        res.json({
-          message: "Departments uploaded successfully",
-          insertedCount: records.length,
-        });
-      } catch (err) {
-        await session.abortTransaction();
-        session.endSession();
-
-        res.status(500).json({
-          message: "Transaction failed. No records inserted.",
-          error: err.message,
-        });
-      }
-    })
-    .on("error", (err) => {
-      res.status(500).json({ message: "Error processing file" });
-    });
-};
-exports.bulkUploadDoctors = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  const filePath = req.file.path;
-  let rowIndex = 1;
-  let doctors = [];
-  let errors = [];
+// Bulk Upload Inventory Items
+exports.bulkUploadInventory = async (req, res) => {
+  if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
   try {
-    const parseCSV = () =>
-      new Promise((resolve, reject) => {
-        fs.createReadStream(filePath)
-          .pipe(csv())
-          .on("data", (row) => {
-            rowIndex++;
-            doctors.push({ rowIndex, ...row });
-          })
-          .on("end", () => resolve())
-          .on("error", (err) => reject(err));
-      });
+    const data = await parseFile(req.file.path);
+    fs.unlinkSync(req.file.path);
 
-    await parseCSV();
+    if (!data.length)
+      return res.status(400).json({ message: "File is empty" });
 
-    if (!doctors.length) throw new Error("CSV is empty!");
+    const errorRows = [];
+    const insertedItems = [];
 
-    let inserted = [];
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const rowNum = i + 2;
 
-    for (const row of doctors) {
-      try {
-        const {
-          name,
-          email,
-          password,
-          doctorType,
-          specialty,
-          department,
-          medicalLicenseNumber,
-          schedule,
-        } = row;
+      const {
+        itemName,
+        itemCode,
+        category,
+        unitOfMeasurement,
+        minStockLevel,
+        maxStockLevel,
+        supplierName,
+        supplierContact,
+        currentStock,
+      } = row;
 
-        if (!name || !email || !password || !doctorType || !specialty || !department || !medicalLicenseNumber) {
-          throw new Error("Missing required doctor fields.");
-        }
-
-        const exists = await User.findOne({ email }).session(session);
-        if (exists) throw new Error(`Email '${email}' already exists.`);
-
-        const specialtyData = await Specialty.findOne({
-          name: new RegExp(`^${specialty.trim()}$`, "i"),
-        }).session(session);
-        if (!specialtyData) throw new Error(`Specialty '${specialty}' not found.`);
-
-        const departmentData = await Department.findOne({
-          name: new RegExp(`^${department.trim()}$`, "i"),
-        }).session(session);
-        if (!departmentData) throw new Error(`Department '${department}' not found.`);
-
-        let parsedSchedule = [];
-        if (schedule) {
-          try {
-            parsedSchedule = JSON.parse(schedule);
-          } catch {
-            throw new Error("Invalid schedule JSON format.");
-          }
-        }
-
-        // create user
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = new User({
-          name,
-          email,
-          password: hashedPassword,
-          role: "DOCTOR",
-        });
-        await newUser.save({ session });
-
-        // create doctor
-        const doctor = new Doctor({
-          userId: newUser._id,
-          doctorType,
-          specialty: specialtyData._id,
-          department: departmentData._id,
-          medicalLicenseNumber,
-          schedule: parsedSchedule,
-        });
-        await doctor.save({ session });
-
-        inserted.push(newUser._id);
-      } catch (err) {
-        errors.push({ row: row.rowIndex, error: err.message });
+      if (
+        !itemName ||
+        !itemCode ||
+        !category ||
+        !unitOfMeasurement ||
+        !minStockLevel ||
+        !maxStockLevel ||
+        !supplierName ||
+        !supplierContact
+      ) {
+        errorRows.push(rowNum);
+        continue;
       }
-    }
 
-    if (errors.length > 0) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({
-        message: "Validation failed. Fix errors and re-upload.",
-        errorRows: errors,
+      // Check for duplicate itemCode
+      const existing = await InventoryItem.findOne({ itemCode: String(itemCode).trim() });
+      if (existing) {
+        errorRows.push(rowNum);
+        continue;
+      }
+
+      insertedItems.push({
+        itemName: String(itemName).trim(),
+        itemCode: String(itemCode).trim(),
+        category: String(category).trim(),
+        unitOfMeasurement: String(unitOfMeasurement).trim(),
+        minStockLevel: Number(minStockLevel),
+        maxStockLevel: Number(maxStockLevel),
+        supplierInfo: {
+          name: String(supplierName).trim(),
+          contact: String(supplierContact).trim(),
+        },
+        currentStock: currentStock ? Number(currentStock) : 0,
       });
     }
 
-    await session.commitTransaction();
-    session.endSession();
+    if (!insertedItems.length)
+      return res.status(400).json({ message: "No valid rows to upload", errorRows });
 
-    res.status(201).json({
-      message: "Doctors uploaded successfully",
-      successCount: inserted.length,
+    await InventoryItem.insertMany(insertedItems);
+
+    res.status(200).json({
+      message: `Successfully uploaded ${insertedItems.length} items`,
+      failedRows: errorRows,
     });
+  } catch (error) {
+    console.error("Bulk upload error:", error);
+    res.status(500).json({ message: "Upload failed", error: error.message });
+  }
+};
+
+// ✅ Bulk upload Operation Theaters
+exports.bulkUploadOperationTheatersHandler = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: "No file uploaded." });
+
+    // Read Excel
+    const workbook = xlsx.readFile(req.file.path);
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const rows = xlsx.utils.sheet_to_json(sheet, { defval: "" });
+
+    // Remove uploaded file after parsing
+    fs.unlinkSync(req.file.path);
+
+    const errorRows = [];
+    const added = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      let { name, status } = rows[i];
+
+      name = name ? String(name).trim() : "";
+      status = status ? String(status).trim() : "Available";
+
+      if (!name) {
+        errorRows.push(i + 2);
+        continue;
+      }
+
+      const exists = await OperationTheater.findOne({ name });
+      if (exists) {
+        errorRows.push(i + 2);
+        continue;
+      }
+
+      const theater = new OperationTheater({ name, status });
+      await theater.save();
+      added.push(theater);
+    }
+
+    res.status(200).json({
+      message: `Successfully added ${added.length} operation theaters.`,
+      errorRows,
+    });
+  } catch (error) {
+    console.error("Bulk upload error:", error);
+    res.status(500).json({ message: "Upload failed", error: error.message });
+  }
+};
+
+exports.bulkUploadReferralPartnersHandler = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: "No file uploaded." });
+
+    // Read uploaded Excel or CSV
+    const workbook = xlsx.readFile(req.file.path);
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const rows = xlsx.utils.sheet_to_json(sheet, { defval: "" });
+
+    // Remove temp uploaded file
+    fs.unlinkSync(req.file.path);
+
+    const errorRows = [];
+    const addedPartners = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      let { name, contactNumber } = rows[i];
+
+      // Convert to string safely (for Excel numbers)
+      name = name ? String(name).trim() : "";
+      contactNumber = contactNumber ? String(contactNumber).trim() : "";
+
+      if (!name || !contactNumber) {
+        errorRows.push(i + 2);
+        continue;
+      }
+
+      // Check duplicate
+      const exists = await ReferralPartner.findOne({ name });
+      if (exists) {
+        errorRows.push(i + 2);
+        continue;
+      }
+
+      const partner = new ReferralPartner({ name, contactNumber });
+      await partner.save();
+      addedPartners.push(partner);
+    }
+
+    res.status(200).json({
+      message: `Successfully added ${addedPartners.length} referral partners.`,
+      errorRows,
+    });
+  } catch (error) {
+    console.error("Bulk upload error:", error);
+    res.status(500).json({ message: "Upload failed", error: error.message });
+  }
+};
+
+
+
+exports. bulkUploadManualChargeItemsHandler = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: "Excel file is required" });
+
+    const workbook = xlsx.readFile(req.file.path);
+    const sheetName = workbook.SheetNames[0];
+    const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+    const errorRows = [];
+    for (let i = 0; i < data.length; i++) {
+      const { itemName, category, defaultPrice, description } = data[i];
+
+      if (!itemName || !category || !defaultPrice || !description) {
+        errorRows.push(i + 2); // Excel row number (header is row 1)
+        continue;
+      }
+
+      const exists = await ManualChargeItem.findOne({ itemName });
+      if (exists) {
+        errorRows.push(i + 2);
+        continue;
+      }
+
+      const newItem = new ManualChargeItem({ itemName, category, defaultPrice, description });
+      await newItem.save();
+    }
+
+    if (errorRows.length > 0) {
+      return res.status(400).json({ message: "Some rows failed", errorRows });
+    }
+
+    res.status(200).json({ message: "Bulk upload successful!" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+exports.bulkUploadProcedures = async (req, res) => {
+  if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+  let workbook;
+  try {
+    workbook = xlsx.readFile(req.file.path);
   } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
-    res.status(500).json({ message: "Bulk upload failed", error: err.message });
+    fs.unlinkSync(req.file.path);
+    return res.status(400).json({ message: "Invalid Excel file", error: err.message });
+  }
+
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const data = xlsx.utils.sheet_to_json(sheet, { defval: "" });
+  fs.unlinkSync(req.file.path);
+
+  const errorRows = [];
+  const proceduresToInsert = [];
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const name = row.name?.trim();
+    const description = row.description?.trim();
+    const cost = Number(row.cost);
+
+    if (!name || !description || !cost || isNaN(cost)) {
+      errorRows.push(i + 2); // +2 for header row
+      continue;
+    }
+
+    proceduresToInsert.push({ name, description, cost });
+  }
+
+  if (errorRows.length > 0) {
+    return res.status(400).json({ message: "Validation failed at rows", errorRows });
+  }
+
+  try {
+    await Procedure.insertMany(proceduresToInsert);
+    res.json({ message: "Procedures uploaded successfully", count: proceduresToInsert.length });
+  } catch (err) {
+    res.status(500).json({ message: "Upload failed", error: err.message });
   }
 };
 
-exports.bulkUploadStaff = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
 
-  const filePath = req.file.path;
-  let rowIndex = 1;
-  let staffMembers = [];
-  let errors = [];
+exports.bulkUploadWards = async (req, res) => {
+  if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+  let workbook;
+  try {
+    workbook = xlsx.readFile(req.file.path);
+  } catch (err) {
+    fs.unlinkSync(req.file.path);
+    return res.status(400).json({ message: "Invalid Excel file", error: err.message });
+  }
+
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const data = xlsx.utils.sheet_to_json(sheet, { defval: "" });
+  fs.unlinkSync(req.file.path);
+
+  const errorRows = [];
+  const wardsToInsert = [];
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const name = row.name?.trim();
+    const roomCategoryName = row.roomCategory?.trim();
+    const bedsStr = row.beds?.trim(); // comma-separated bed numbers
+
+    if (!name || !roomCategoryName || !bedsStr) {
+      errorRows.push(i + 2); // +2 for header row
+      continue;
+    }
+
+    const roomCategoryData = await RoomCategory.findOne({ name: roomCategoryName });
+    if (!roomCategoryData) {
+      errorRows.push(i + 2);
+      continue;
+    }
+
+    const bedNumbers = bedsStr.split(',').map(b => b.trim()).filter(Boolean);
+    if (bedNumbers.length === 0) {
+      errorRows.push(i + 2);
+      continue;
+    }
+
+    const beds = bedNumbers.map(bedNumber => ({ bedNumber, status: 'available' }));
+
+    wardsToInsert.push({
+      name,
+      roomCategory: roomCategoryData._id,
+      beds
+    });
+  }
+
+  if (errorRows.length > 0)
+    return res.status(400).json({ message: "Validation failed at rows", errorRows });
 
   try {
-    const parseCSV = () =>
-      new Promise((resolve, reject) => {
-        fs.createReadStream(filePath)
-          .pipe(csv())
-          .on("data", (row) => {
-            rowIndex++;
-            staffMembers.push({ rowIndex, ...row });
-          })
-          .on("end", () => resolve())
-          .on("error", (err) => reject(err));
+    await Ward.insertMany(wardsToInsert);
+    res.json({ message: "Wards uploaded successfully", count: wardsToInsert.length });
+  } catch (err) {
+    res.status(500).json({ message: "Upload failed", error: err.message });
+  }
+};
+
+
+
+exports.bulkUploadRoomCategories = async (req, res) => {
+  if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+  let workbook;
+  try {
+    workbook = xlsx.readFile(req.file.path);
+  } catch (err) {
+    fs.unlinkSync(req.file.path);
+    return res.status(400).json({ message: "Invalid Excel file", error: err.message });
+  }
+
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const data = xlsx.utils.sheet_to_json(sheet, { defval: "" });
+  fs.unlinkSync(req.file.path);
+
+  const errorRows = [];
+  const records = [];
+
+  data.forEach((row, index) => {
+    const name = row.name?.trim();
+    const description = row.description?.trim();
+    if (!name || !description) errorRows.push(index + 2); // +2 because Excel rows start at 1 and first row is header
+    else records.push({ name, description });
+  });
+
+  if (errorRows.length > 0)
+    return res.status(400).json({ message: "Validation failed at rows", errorRows });
+
+  try {
+    await RoomCategory.insertMany(records);
+    res.json({ message: "Room Categories uploaded successfully", count: records.length });
+  } catch (err) {
+    res.status(500).json({ message: "Upload failed", error: err.message });
+  }
+};
+
+
+exports.bulkUploadLabourRooms = async (req, res) => {
+  if (!req.file)
+    return res.status(400).json({ message: "No file uploaded" });
+
+  let workbook;
+  try {
+    workbook = xlsx.readFile(req.file.path);
+  } catch (err) {
+    fs.unlinkSync(req.file.path);
+    return res.status(400).json({ message: "Invalid Excel file", error: err.message });
+  }
+
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const data = xlsx.utils.sheet_to_json(sheet, { defval: "" });
+  fs.unlinkSync(req.file.path);
+
+  const errorRows = [];
+  const records = [];
+
+  data.forEach((row, index) => {
+    const name = row.name?.trim();
+    const description = row.description?.trim();
+    if (!name) errorRows.push(index + 2);
+    else records.push({ name, description });
+  });
+
+  if (errorRows.length > 0)
+    return res.status(400).json({
+      message: "Validation failed at rows",
+      errorRows
+    });
+
+  try {
+    await LabourRoom.insertMany(records);
+    res.json({ message: "Labour Rooms uploaded successfully", count: records.length });
+  } catch (err) {
+    res.status(500).json({ message: "Upload failed", error: err.message });
+  }
+};
+
+// Utility to read Excel or CSV
+const parseFile = (filePath) => {
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext === ".xlsx" || ext === ".xls") {
+    const workbook = xlsx.readFile(filePath);
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    return xlsx.utils.sheet_to_json(sheet, { defval: "" });
+  } else if (ext === ".csv") {
+    return new Promise((resolve, reject) => {
+      const rows = [];
+      fs.createReadStream(filePath)
+        .pipe(csv())
+        .on("data", (row) => rows.push(row))
+        .on("end", () => resolve(rows))
+        .on("error", (err) => reject(err));
+    });
+  } else {
+    throw new Error("Unsupported file type. Only CSV or Excel allowed.");
+  }
+};
+
+// ----------- BULK UPLOAD SPECIALTY -----------
+exports.bulkUploadSpeciality = async (req, res) => {
+  if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+  try {
+    const data = await parseFile(req.file.path);
+    fs.unlinkSync(req.file.path);
+
+    const records = [];
+    const errorRows = [];
+
+    data.forEach((row, idx) => {
+      if (!row.name || !row.description) errorRows.push(idx + 2);
+      else records.push({ name: row.name.trim(), description: row.description.trim() });
+    });
+
+    if (errorRows.length) return res.status(400).json({ message: "Validation failed", errorRows });
+
+    const inserted = await Specialty.insertMany(records);
+    res.json({ message: "Specialties uploaded successfully", insertedCount: inserted.length });
+  } catch (err) {
+    fs.existsSync(req.file.path) && fs.unlinkSync(req.file.path);
+    res.status(500).json({ message: "Upload failed", error: err.message });
+  }
+};
+
+// ----------- BULK UPLOAD DEPARTMENT -----------
+exports.bulkUploadDepartment = async (req, res) => {
+  if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+  try {
+    const data = await parseFile(req.file.path);
+    fs.unlinkSync(req.file.path);
+
+    const records = [];
+    const errorRows = [];
+
+    data.forEach((row, idx) => {
+      if (!row.name || !row.description) errorRows.push(idx + 2);
+      else records.push({ name: row.name.trim(), description: row.description.trim() });
+    });
+
+    if (errorRows.length) return res.status(400).json({ message: "Validation failed", errorRows });
+
+    const inserted = await Department.insertMany(records);
+    res.json({ message: "Departments uploaded successfully", insertedCount: inserted.length });
+  } catch (err) {
+    fs.existsSync(req.file.path) && fs.unlinkSync(req.file.path);
+    res.status(500).json({ message: "Upload failed", error: err.message });
+  }
+};
+
+// ----------- BULK UPLOAD DOCTORS -----------
+exports.bulkUploadDoctors = async (req, res) => {
+  if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+  try {
+    const data = await parseFile(req.file.path);
+    fs.unlinkSync(req.file.path);
+    if (!data.length) throw new Error("File is empty");
+
+    const errors = [];
+    let successCount = 0;
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const rowNum = i + 2; // Excel-like row numbers
+
+      let { name, email, password, doctorType, specialty, department, medicalLicenseNumber } = row;
+
+      // Normalize / trim input
+      name = String(name || "").trim();
+      email = String(email || "").trim();
+      password = String(password || "").trim();
+      doctorType = String(doctorType || "").trim();
+      specialty = String(specialty || "").trim();
+      department = String(department || "").trim();
+      medicalLicenseNumber = String(medicalLicenseNumber || "").trim();
+
+      // Validation
+      if (!name || !email || !password || !doctorType || !specialty || !department || !medicalLicenseNumber) {
+        errors.push({ row: rowNum, error: "Missing required fields" });
+        continue;
+      }
+
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        errors.push({ row: rowNum, error: "Email already exists" });
+        continue;
+      }
+
+      const specialtyData = await Specialty.findOne({ name: new RegExp(`^${specialty}$`, "i") });
+      const departmentData = await Department.findOne({ name: new RegExp(`^${department}$`, "i") });
+
+      if (!specialtyData || !departmentData) {
+        errors.push({ row: rowNum, error: "Invalid Specialty or Department" });
+        continue;
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const newUser = await User.create({
+        name,
+        email,
+        password: hashedPassword,
+        role: "DOCTOR",
       });
 
-    await parseCSV();
+      const defaultSchedule = [
+        "Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"
+      ].map(day => ({
+        dayOfWeek: day,
+        startTime: "09:00",
+        endTime: "17:00",
+        isAvailable: true
+      }));
 
-    if (!staffMembers.length) throw new Error("CSV is empty!");
+      await Doctor.create({
+        userId: newUser._id,
+        doctorType,
+        specialty: specialtyData._id,
+        department: departmentData._id,
+        medicalLicenseNumber,
+        schedule: defaultSchedule,
+      });
 
-    let inserted = [];
+      successCount++;
+    }
 
-    for (const row of staffMembers) {
+    if (errors.length)
+      return res.status(400).json({ message: "Some rows failed", errorRows: errors, successCount });
+
+    res.json({ message: "Doctors uploaded successfully", successCount });
+  } catch (err) {
+    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    res.status(500).json({ message: "Upload failed", error: err.message });
+  }
+};
+
+// ----------- BULK UPLOAD STAFF -----------
+exports.bulkUploadStaff = async (req, res) => {
+  if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+  try {
+    const data = await parseFile(req.file.path);
+    fs.unlinkSync(req.file.path);
+
+    if (!data.length) throw new Error("File is empty");
+
+    const errors = [];
+    let successCount = 0;
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const rowNum = i + 2; // For Excel row reference
+      let { name, email, password, contactNumber, designation, department } = row;
+
+      // Trim all values
+      name = String(name || "").trim();
+      email = String(email || "").trim();
+      password = String(password || "").trim();
+      contactNumber = String(contactNumber || "").trim();
+      designation = String(designation || "").trim();
+      department = department ? String(department).trim() : null;
+
+      // Validate required fields
+      if (!name || !email || !password || !contactNumber || !designation) {
+        errors.push({ row: rowNum, error: "Missing required fields" });
+        continue;
+      }
+
+      // Check if user already exists
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        errors.push({ row: rowNum, error: "Email already exists" });
+        continue;
+      }
+
+      // Handle department if provided
+      let departmentId = null;
+      if (department) {
+        const departmentData = await Department.findOne({ name: department });
+        if (!departmentData) {
+          errors.push({ row: rowNum, error: "Department not found" });
+          continue;
+        }
+        departmentId = departmentData._id;
+      }
+
       try {
-        const { name, email, password, contactNumber, designation, department } = row;
-
-        if (!name || !email || !password || !contactNumber || !designation) {
-          throw new Error("Missing required staff fields.");
-        }
-
-        const exists = await User.findOne({ email }).session(session);
-        if (exists) throw new Error(`Email '${email}' already exists.`);
-
-        let departmentData = null;
-        if (department) {
-          departmentData = await Department.findOne({
-            name: new RegExp(`^${department.trim()}$`, "i"),
-          }).session(session);
-          if (!departmentData) throw new Error(`Department '${department}' not found.`);
-        }
-
-        // create user
+        // Hash the password safely
         const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = new User({
+
+        // Create User
+        const newUser = await User.create({
           name,
           email,
           password: hashedPassword,
           role: "STAFF",
         });
-        await newUser.save({ session });
 
-        // create staff
-        const staff = new Staff({
+        // Create Staff
+        await Staff.create({
           userId: newUser._id,
           contactNumber,
           designation,
-          department: departmentData ? departmentData._id : null,
+          department: departmentId,
         });
-        await staff.save({ session });
 
-        inserted.push(newUser._id);
+        successCount++;
       } catch (err) {
-        errors.push({ row: row.rowIndex, error: err.message });
+        errors.push({ row: rowNum, error: "Failed to create user/staff: " + err.message });
       }
     }
 
-    if (errors.length > 0) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({
-        message: "Validation failed. Fix errors and re-upload.",
-        errorRows: errors,
-      });
+    if (errors.length) {
+      return res.status(400).json({ message: "Some rows failed", errorRows: errors, successCount });
     }
 
-    await session.commitTransaction();
-    session.endSession();
-
-    res.status(201).json({
-      message: "Staff uploaded successfully",
-      successCount: inserted.length,
-    });
+    res.json({ message: "Staff uploaded successfully", successCount });
   } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
-    res.status(500).json({ message: "Bulk upload failed", error: err.message });
+    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    res.status(500).json({ message: "Upload failed", error: err.message });
   }
 };
-

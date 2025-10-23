@@ -18,6 +18,10 @@ const DoctorSchema = new mongoose.Schema({
     endTime: { type: String, required: true },
     isAvailable: { type: Boolean, default: true }
   }],
+          isActive: {
+  type: Boolean,
+  default: true, // default active on registration
+},
 
   // isAvailable: { type: Boolean, default: false }, // doctor login/logout availability
   // isActive: { type: Boolean, default: true }

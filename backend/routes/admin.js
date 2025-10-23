@@ -6,8 +6,11 @@ const {registerHandler,getAllUsersHandler,createDepartmentHandler
     ,getAllStaffHandler,getStaffByIdHandler,getAllDoctorsHandler
     ,getDoctorByIdHandler,createReferralPartnerHandler,getAllReferralPartnersHandler,createOperationTheaterHandler
     ,getAllOperationTheatersHandler,deleteUserHandler}  = require("../controllers/admin")
-
+const {createInventoryItem} = require('../controllers/inventoryManager');
 const router = express.Router();
+
+
+router.post('/items', createInventoryItem);
 router.post('/users', registerHandler); 
 router.get('/users', getAllUsersHandler);
 router.delete('/users',deleteUserHandler);

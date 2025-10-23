@@ -15,8 +15,8 @@ const IPDAdmission = require('../models/IPDAdmission');
 const bcrypt = require('bcrypt');
 
 const registerHandler = async (req, res) => {
-  // const session = await mongoose.startSession();
-  // session.startTransaction();
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
   try {
     const {
@@ -61,7 +61,7 @@ const registerHandler = async (req, res) => {
       password: hashedPassword,
       role,
     });
-    // await newUser.save({ session });
+    await newUser.save({ session });
 
   
     if (role.toUpperCase() === 'DOCTOR') {
@@ -116,9 +116,9 @@ const registerHandler = async (req, res) => {
          schedule: fullWeekSchedule
       });
 
-      // await doctor.save({ session });
+      await doctor.save({ session });
 
-      // await session.commitTransaction();
+      await session.commitTransaction();
       return res.status(201).json({
         message: 'Doctor registered successfully with schedule.',
         userId: newUser._id,
@@ -147,16 +147,19 @@ const registerHandler = async (req, res) => {
       throw new Error('Staff already exists for this user.');
     }
 
-    const staff = await Staff.create({
-      userId: newUser._id,
-      contactNumber,
-      designation,
-      department: departmentId,
-    });
+     const staff = await Staff.create(
+        [
+          {
+            userId: newUser._id,
+            contactNumber,
+            designation,
+            department: departmentId,
+          },
+        ],
+        { session }
+      );
 
-    // await staff.save({ session });
-
-    // await session.commitTransaction();
+    await session.commitTransaction();
     return res.status(201).json({
       message: 'Staff registered successfully.',
       userId: newUser._id,
@@ -164,10 +167,10 @@ const registerHandler = async (req, res) => {
     });
   } catch (error) {
     console.error('Registration error:', error.message);
-    // await session.abortTransaction();
+    await session.abortTransaction();
     return res.status(400).json({ message: error.message });
   } finally {
-    // session.endSession();
+    session.endSession();
   }
 };
 
@@ -715,34 +718,38 @@ const deleteUserHandler = async (req, res) => {
       const doctor = await Doctor.findById(id);
       if (!doctor) return res.status(404).json({ message: 'Doctor not found.' });
 
+      // ✅ Mark both doctor + user inactive
       doctor.isActive = false;
       await doctor.save();
 
-      await User.findByIdAndUpdate(doctor.userId, { isActive: false });
+      if (doctor.userId) {
+        await User.findByIdAndUpdate(doctor.userId, { isActive: false });
+      }
 
-      return res.status(200).json({ message: 'Doctor deactivated successfully.' });
+      return res.status(200).json({ message: 'Doctor set as inactive successfully.' });
 
     } else if (role === 'STAFF') {
       const staff = await Staff.findById(id);
       if (!staff) return res.status(404).json({ message: 'Staff not found.' });
 
-      
       staff.isActive = false;
       await staff.save();
 
-      await User.findByIdAndUpdate(staff.userId, { isActive: false });
+      if (staff.userId) {
+        await User.findByIdAndUpdate(staff.userId, { isActive: false });
+      }
 
-      return res.status(200).json({ message: 'Staff deactivated successfully.' });
+      return res.status(200).json({ message: 'Staff set as inactive successfully.' });
 
     } else {
       return res.status(400).json({ message: 'Invalid role. Only DOCTOR or STAFF allowed.' });
     }
-
   } catch (error) {
-    console.error('Delete User Error:', error);
+    console.error('Deactivate User Error:', error);
     res.status(500).json({ message: 'Server error.' });
   }
 };
+
 
 
 module.exports = {registerHandler,getAllUsersHandler,createDepartmentHandler,getAllDepartmentsHandler
