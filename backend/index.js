@@ -8,7 +8,7 @@ const { setupSocket } = require('./utils/sockets');
 const { restrictToLoggedInUserOnly, restrictTo, restrictToDesignation } = require('./middlewares/auth');
 dotenv.config();
 
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 8001;
 const app = express();
 const server = http.createServer(app); 
 
