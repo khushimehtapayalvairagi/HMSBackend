@@ -106,17 +106,20 @@ const registerHandler = async (req, res) => {
   }));
 
 
-const doctor = await Doctor.create(
-  {
-    userId: newUser._id,
-    doctorType,
-    specialty: specialtyData._id,
-    department: departmentData._id,
-    medicalLicenseNumber,
-    schedule: fullWeekSchedule,
-  },
+const [doctor] = await Doctor.create(
+  [
+    {
+      userId: newUser._id,
+      doctorType,
+      specialty: specialtyData._id,
+      department: departmentData._id,
+      medicalLicenseNumber,
+      schedule: fullWeekSchedule,
+    },
+  ],
   { session }
 );
+
 
 
 
