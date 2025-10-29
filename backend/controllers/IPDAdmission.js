@@ -69,7 +69,7 @@ exports.createIPDAdmission = async (req, res) => {
             wardId,
             bedNumber,
             roomCategoryId,
-           admittingDoctorId: userDoctorId,
+           admittingDoctorId: doctor._id,
             expectedDischargeDate
         });
 
