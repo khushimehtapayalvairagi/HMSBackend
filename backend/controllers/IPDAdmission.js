@@ -8,8 +8,14 @@ const Visit = require('../models/Visit');
 const Doctor = require('../models/Doctor');
 const Bill = require('../models/Bill');
 
+const mongoose = require("mongoose");
+const Doctor = require("../models/Doctor");
+const Patient = require("../models/Patient");
+const Ward = require("../models/Ward");
+const IPDAdmission = require("../models/IPDAdmission");
+
 exports.createIPDAdmission = async (req, res) => {
-  console.log("📥 Incoming IPD Admission Payload:", req.body);
+  console.log("📥 IPDAdmission payload:", req.body);
 
   try {
     const {
@@ -17,97 +23,116 @@ exports.createIPDAdmission = async (req, res) => {
       wardId,
       bedNumber,
       roomCategoryId,
-      admittingDoctorId,
+      admittingDoctorId, // Doctor._id from frontend
       expectedDischargeDate,
     } = req.body;
 
-    // --- 1. Validate required fields ---
+    // ✅ Step 1: Validate required fields
     if (!patientId || !wardId || !bedNumber || !roomCategoryId || !admittingDoctorId) {
-      return res.status(400).json({ message: "All fields are required." });
-    }
-
-    // --- 2. Check that doctorId is a valid ObjectId ---
-    const mongoose = require("mongoose");
-    if (!mongoose.Types.ObjectId.isValid(admittingDoctorId)) {
       return res.status(400).json({
-        message: `Invalid Doctor ID format: ${admittingDoctorId}`,
+        message: "All fields are required: patientId, wardId, bedNumber, roomCategoryId, admittingDoctorId.",
       });
     }
 
-    // --- 3. Debug: verify doctor actually exists in DB ---
-    const doctorDoc = await Doctor.findById(admittingDoctorId).lean();
-    if (!doctorDoc) {
-      const totalDoctors = await Doctor.countDocuments();
-      const sampleDoctors = await Doctor.find({}, { _id: 1, userId: 1 }).limit(5);
-      console.error("❌ Doctor not found for ID:", admittingDoctorId);
-      console.log("🩺 Total doctors in DB:", totalDoctors);
-      console.log("🩺 Sample doctor IDs:", sampleDoctors);
-      return res.status(404).json({
-        message: "Doctor not found in database.",
-        doctorId: admittingDoctorId,
-        sampleDoctorIds: sampleDoctors,
-      });
+    // ✅ Step 2: Validate ID format (avoid CastError)
+    if (!mongoose.Types.ObjectId.isValid(admittingDoctorId)) {
+      console.warn("⚠️ Invalid Doctor ID format:", admittingDoctorId);
+      return res.status(400).json({ message: "Invalid Doctor ID format." });
     }
 
-    // --- 4. Fetch patient and ward ---
-    const [patient, ward] = await Promise.all([
-      Patient.findById(patientId),
-      Ward.findById(wardId),
-    ]);
-
-    if (!patient || !ward) {
-      return res.status(404).json({
-        message: "Invalid patient or ward reference.",
-        patientFound: !!patient,
-        wardFound: !!ward,
-      });
-    }
-
-    // --- 5. Prevent duplicate active admissions ---
+    // ✅ Step 3: Check for existing active admission
     const existingAdmission = await IPDAdmission.findOne({
       patientId,
       status: "Admitted",
     });
+
     if (existingAdmission) {
       return res.status(400).json({
         message: "Patient is already admitted and cannot be admitted again.",
       });
     }
 
-    // --- 6. Verify bed availability ---
+    // ✅ Step 4: Fetch required documents safely
+    let patient, doctor, ward;
+
+    try {
+      [patient, doctor, ward] = await Promise.all([
+        Patient.findById(patientId),
+        Doctor.findById(admittingDoctorId),
+        Ward.findById(wardId),
+      ]);
+    } catch (err) {
+      console.error("❌ Error fetching related documents:", err.message);
+      return res.status(500).json({ message: "Error fetching related data.", error: err.message });
+    }
+
+    console.log({
+      patientExists: !!patient,
+      doctorExists: !!doctor,
+      wardExists: !!ward,
+    });
+
+    // ✅ Step 5: Validate references
+    if (!patient || !doctor || !ward) {
+      return res.status(404).json({
+        message: "Invalid reference: patient, doctor, or ward not found.",
+        found: { patient: !!patient, doctor: !!doctor, ward: !!ward },
+      });
+    }
+
+    // ✅ Step 6: Find and validate bed
     const bed = ward.beds.find((b) => b.bedNumber === bedNumber);
     if (!bed) {
       return res.status(400).json({ message: "Bed not found in this ward." });
     }
     if (bed.status !== "available") {
-      return res.status(400).json({ message: "Bed already occupied." });
+      return res.status(400).json({ message: "Bed is already occupied." });
     }
 
-    bed.status = "occupied";
-    await ward.save();
+    // ✅ Step 7: Update bed status
+    try {
+      bed.status = "occupied";
+      await ward.save();
+    } catch (err) {
+      console.error("❌ Error updating bed status:", err.message);
+      return res.status(500).json({ message: "Failed to update bed status.", error: err.message });
+    }
 
-    // --- 7. Create Admission ---
-    const admission = await IPDAdmission.create({
-      patientId,
-      wardId,
-      bedNumber,
-      roomCategoryId,
-      admittingDoctorId,
-      expectedDischargeDate,
-      status: "Admitted",
-    });
+    // ✅ Step 8: Create IPD Admission
+    let admission;
+    try {
+      admission = new IPDAdmission({
+        patientId,
+        wardId,
+        bedNumber,
+        roomCategoryId,
+        admittingDoctorId,
+        expectedDischargeDate,
+        status: "Admitted",
+      });
+      await admission.save();
+    } catch (err) {
+      console.error("❌ Error saving admission:", err.message);
+      return res.status(500).json({ message: "Failed to save IPD admission.", error: err.message });
+    }
 
-    patient.status = "Active";
-    await patient.save();
+    // ✅ Step 9: Update patient status
+    try {
+      patient.status = "Active";
+      await patient.save();
+    } catch (err) {
+      console.error("❌ Error updating patient status:", err.message);
+    }
 
-    return res.status(201).json({
+    // ✅ Step 10: Final response
+    res.status(201).json({
       message: "IPD Admission successful.",
       admission,
     });
   } catch (error) {
-    console.error("❌ IPD Admission Error:", error);
+    console.error("🔥 Global IPD Admission Error:", error);
     res.status(500).json({
-      message: "Server error.",
+      message: "Server error during IPD admission.",
       error: error.message,
     });
   }
