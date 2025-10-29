@@ -106,29 +106,27 @@ const registerHandler = async (req, res) => {
   }));
 
 
-const [doctor] = await Doctor.create(
-  [
-    {
-      userId: newUser._id,
-      doctorType,
-      specialty: specialtyData._id,
-      department: departmentData._id,
-      medicalLicenseNumber,
-      schedule: fullWeekSchedule,
-    },
-  ],
-  { session }
-);
+try {
+  const [doctor] = await Doctor.create([{
+    userId: newUser._id,
+    doctorType,
+    specialty: specialtyData._id,
+    department: departmentData._id,
+    medicalLicenseNumber,
+    schedule: fullWeekSchedule,
+  }], { session });
 
+  await session.commitTransaction();
+  res.status(201).json({
+    message: 'Doctor registered successfully with schedule.',
+    userId: newUser._id,
+    doctorId: doctor._id,
+  });
+} catch (err) {
+  await session.abortTransaction();
+  throw err;
+}
 
-
-
-      await session.commitTransaction();
-      return res.status(201).json({
-        message: 'Doctor registered successfully with schedule.',
-        userId: newUser._id,
-        doctorId: doctor._id,
-      });
     }
 
    
