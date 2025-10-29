@@ -131,38 +131,32 @@ const getAvailableDoctorsHandler = async (req, res) => {
     res.status(500).json({ message: 'Server error.' });
   }
 };
+
 const createVisitHandler = async (req, res) => {
   try {
     const { patientId, patientDbId, visitType, assignedDoctorId, referredBy, payment } = req.body;
 
-    // generate receipt number
-    const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    // generate receipt number based on date + count
+    const today = new Date().toISOString().slice(0,10).replace(/-/g,""); // 20250923
     const countToday = await Visit.countDocuments({
       createdAt: {
-        $gte: new Date().setHours(0, 0, 0, 0),
-        $lt: new Date().setHours(23, 59, 59, 999),
-      },
+        $gte: new Date().setHours(0,0,0,0),
+        $lt: new Date().setHours(23,59,59,999)
+      }
     });
-    const receiptNumber = `${today}-${String(countToday + 1).padStart(3, "0")}`;
 
-    // ✅ Find doctor by Doctor._id (not userId)
-    const doctor = await Doctor.findById(assignedDoctorId).populate("userId", "name");
-
-    if (!doctor) {
-      return res.status(404).json({ message: "Doctor not found" });
-    }
-
-    // ✅ Store doctor._id in assignedDoctorId
+    const receiptNumber = `${today}-${String(countToday + 1).padStart(3, '0')}`;
+const doctor = await Doctor.findById(assignedDoctorId).populate('userId', 'name');
     const visit = new Visit({
-      patientId: patientId.trim(),
+   patientId: patientId.trim(),
       patientDbId,
       visitType,
-      assignedDoctorId: doctor._id, // ensure doctor._id is stored
+      assignedDoctorId,
       referredBy,
       payment,
       receiptNumber,
-      doctorName: doctor.userId.name,
-      visitDate: new Date(),
+        doctorName: doctor.userId.name,
+         visitDate: new Date(),
     });
 
     await visit.save();
@@ -172,7 +166,6 @@ const createVisitHandler = async (req, res) => {
     res.status(500).json({ message: "Error creating visit" });
   }
 };
-
 const addPrescriptionHandler = async (req, res) => {
   try {
     const { visitId } = req.params;
