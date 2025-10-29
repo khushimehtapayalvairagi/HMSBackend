@@ -146,7 +146,8 @@ const createVisitHandler = async (req, res) => {
     });
 
     const receiptNumber = `${today}-${String(countToday + 1).padStart(3, '0')}`;
-const doctor = await Doctor.findById(assignedDoctorId).populate('userId', 'name');
+const doctor = await Doctor.findOne({ userId: assignedDoctorId }).populate('userId', 'name');
+
     const visit = new Visit({
    patientId: patientId.trim(),
       patientDbId,
