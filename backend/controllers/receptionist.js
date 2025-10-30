@@ -105,26 +105,35 @@ const getAvailableDoctorsHandler = async (req, res) => {
       return res.status(400).json({ message: "specialtyName is required." });
     }
 
-    // Find specialty by name
-    const specialty = await Specialty.findOne({ name: specialtyName.trim() });
+    // Find specialty by name (case-insensitive)
+    const specialty = await Specialty.findOne({ name: { $regex: new RegExp(`^${specialtyName}$`, "i") } });
     if (!specialty) {
       return res.status(404).json({ message: `Specialty '${specialtyName}' not found.` });
     }
 
-    // Now find doctors where specialty field matches specialty._id
-    const doctors = await Doctor.find({ specialty: specialty._id })
+    // Find all doctors with that specialty
+    const doctors = await Doctor.find({ specialty: specialty._id, isActive: true })
       .populate("userId", "name email role");
 
     if (!doctors || doctors.length === 0) {
       return res.status(200).json({ message: "No doctors available.", doctors: [] });
     }
 
-    res.status(200).json({ doctors });
+    // ✅ Return doctorId (Doctor._id), not userId
+    const formattedDoctors = doctors.map(doc => ({
+      doctorId: doc._id, // <-- This will be used as assignedDoctorId in visit form
+      name: doc.userId?.name || "Unknown",
+      email: doc.userId?.email,
+      specialty: specialty.name,
+    }));
+
+    res.status(200).json({ doctors: formattedDoctors });
   } catch (err) {
     console.error("Error fetching doctors:", err);
     res.status(500).json({ message: "Error fetching available doctors." });
   }
 };
+
 
 
 
