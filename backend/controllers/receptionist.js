@@ -96,10 +96,9 @@ const getPatientByIdHandler = async (req, res) => {
         res.status(500).json({ message: 'Server error.' });
     }
 };
-
 const getAvailableDoctorsHandler = async (req, res) => {
   try {
-    const { specialtyName, dayOfWeek } = req.body;
+    const { specialtyName } = req.body;
 
     if (!specialtyName) {
       return res.status(400).json({
@@ -109,59 +108,51 @@ const getAvailableDoctorsHandler = async (req, res) => {
 
     console.log("🔍 Checking available doctors for specialty:", specialtyName);
 
-    // Find specialty by name (case-insensitive)
     const specialty = await Specialty.findOne({
       name: { $regex: new RegExp(`^${specialtyName}$`, "i") },
     });
 
     if (!specialty) {
-      console.log("❌ No specialty found for:", specialtyName);
       return res.status(404).json({
         message: `Specialty not found: ${specialtyName}`,
       });
     }
 
-    console.log("✅ Found specialty:", specialty.name, specialty._id);
-
-    // Find all doctors for this specialty
-    let doctors = await Doctor.find({ specialty: specialty._id, isActive: true })
+    // ✅ Fetch all doctors with this specialty — ignore schedule
+    const doctors = await Doctor.find({ specialty: specialty._id, isActive: true })
       .populate("userId", "name email role")
-      .populate("specialty", "name");
-
-    console.log("👨‍⚕️ Doctors found before schedule filter:", doctors.length);
-
-    // Optional: Filter by day of week if provided
-    if (dayOfWeek) {
-      doctors = doctors.filter((doc) =>
-        doc.schedule.some(
-          (s) =>
-            s.dayOfWeek.toLowerCase() === dayOfWeek.toLowerCase() &&
-            s.isAvailable === true
-        )
-      );
-      console.log("📅 After schedule filter:", doctors.length);
-    }
+      .populate("specialty", "name")
+      .populate("department", "name");
 
     if (doctors.length === 0) {
-      console.log("⚠️ No doctors available for specialty:", specialtyName);
       return res.status(200).json({
-        message: "No doctors available.",
+        message: "No doctors available for this specialty.",
         doctors: [],
       });
     }
 
-    res.status(200).json({
-      message: "Doctors available.",
-      doctors,
+    // ✅ Map to simplified structure for frontend
+    const doctorList = doctors.map((doc) => ({
+      doctorId: doc._id,
+      name: doc.userId?.name,
+      specialty: doc.specialty?.name,
+      department: doc.department?.name,
+      email: doc.userId?.email,
+    }));
+
+    return res.status(200).json({
+      message: "Doctors fetched successfully.",
+      doctors: doctorList,
     });
   } catch (error) {
-    console.error("❌ Error in getAvailableDoctorsHandler:", error);
+    console.error("❌ Error fetching available doctors:", error.message);
     res.status(500).json({
-      message: "Server error",
+      message: "Error fetching doctors.",
       error: error.message,
     });
   }
 };
+
 
 
 const createVisitHandler = async (req, res) => {
