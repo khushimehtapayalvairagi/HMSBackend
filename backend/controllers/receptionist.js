@@ -97,40 +97,22 @@ const getPatientByIdHandler = async (req, res) => {
     }
 };
 
-
 const getAvailableDoctorsHandler = async (req, res) => {
   try {
     const { specialtyName } = req.body;
-    if (!specialtyName ) {
-      return res.status(400).json({ message: 'specialtyName and dayOfWeek are required in the body.' });
-    }
-
     const specialty = await Specialty.findOne({ name: specialtyName.trim() });
-    if (!specialty) {
-      return res.status(404).json({ message: `Specialty '${specialtyName}' not found.` });
-    }
+    if (!specialty) return res.status(404).json({ message: "Specialty not found" });
 
-    const doctors = await Doctor.find({
-      specialty: specialty._id,
-      isAvailable: true,
-      //  isActive: true,
-        "schedule.isAvailable": true
-      // schedule: {
-      //   $elemMatch: {
-      //     dayOfWeek,
-      //     isAvailable: true,
-      //   },
-      // },
-    }).populate('userId', 'name email');
-  if (!doctors || doctors.length === 0) {
-      return res.status(200).json({ doctors: [], message: "No doctors available." });
-    }
-    res.status(200).json({ doctors });
-  } catch (error) {
-    console.error('Fetch Doctors Error:', error);
-    res.status(500).json({ message: 'Server error.' });
+    const doctors = await Doctor.find({ specialty: specialty._id })
+      .populate('userId', 'name email');
+
+    res.status(200).json(doctors);
+  } catch (err) {
+    console.error("Error fetching doctors:", err);
+    res.status(500).json({ message: "Error fetching doctors" });
   }
 };
+
 
 const createVisitHandler = async (req, res) => {
   try {
