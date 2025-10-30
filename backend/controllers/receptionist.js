@@ -137,7 +137,7 @@ const getAvailableDoctorsHandler = async (req, res) => {
 const createVisitHandler = async (req, res) => {
   try {
     const { patientId, patientDbId, visitType, assignedDoctorId, referredBy, payment } = req.body;
-   console.log("Assigned Doctor ID received from frontend:", assignedDoctorId);
+
     // generate receipt number based on date + count
     const today = new Date().toISOString().slice(0,10).replace(/-/g,""); // 20250923
     const countToday = await Visit.countDocuments({
