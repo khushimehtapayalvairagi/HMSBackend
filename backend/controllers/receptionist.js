@@ -341,4 +341,4 @@ const getUnbilledProceduresForPatientHandler = async (req, res) => {
 
 
 module.exports = {registerPatientHandler,getAllPatientsHandler,getPatientByIdHandler,createVisitHandler,getVisitsByPatientHandler, getPrescriptionsByPatientHandler
-                ,updateVisitStatusHandler,getAvailableDoctorsHandler,getActivePatientsHandler,getUnbilledProceduresForPatientHandler,addPrescriptionHandler}
+                ,getAvailableDoctorsHandler,getActivePatientsHandler,getUnbilledProceduresForPatientHandler,addPrescriptionHandler}
