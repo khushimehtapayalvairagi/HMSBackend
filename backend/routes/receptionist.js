@@ -9,7 +9,7 @@ router.get('/patients', getAllPatientsHandler);
 router.get('/patients/:id', getPatientByIdHandler);
 router.get('/specialties', getAllSpecialtiesHandler);
 router.get('/departments',getAllDepartmentsHandler);
-router.post('/doctors', getAvailableDoctorsHandler);
+router.post('/available-doctors', getAvailableDoctorsHandler);
 router.post('/visits',  createVisitHandler);
 router.get('/visits/:patientId',  getVisitsByPatientHandler);
 router.get('/prescriptions/:patientId', getPrescriptionsByPatientHandler);
