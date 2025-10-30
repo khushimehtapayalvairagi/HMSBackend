@@ -15,9 +15,6 @@ const IPDAdmission = require('../models/IPDAdmission');
 const bcrypt = require('bcrypt');
 
 const registerHandler = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     const {
       name,
@@ -27,33 +24,22 @@ const registerHandler = async (req, res) => {
       doctorType,
       specialty,
       medicalLicenseNumber,
-      schedule,
       contactNumber,
       designation,
       department,
     } = req.body;
 
     const requesterRole = req.user.role;
+    if (requesterRole !== 'ADMIN') throw new Error('Only Admin is allowed to register users.');
 
-    
     if (!name || !email || !password || !role) {
       throw new Error('Name, email, password, and role are required.');
     }
 
-    if (requesterRole !== 'ADMIN') {
-      throw new Error('Only Admin is allowed to register users.');
-    }
-    if (role === 'ADMIN') {
-    //   throw new Error('Admin cannot create another Admin.');
-    }
-
     const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      throw new Error('User with this email already exists.');
-    }
+    if (existingUser) throw new Error('User with this email already exists.');
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await User.create({
       name,
@@ -61,9 +47,7 @@ const registerHandler = async (req, res) => {
       password: hashedPassword,
       role,
     });
-    await newUser.save({ session });
 
-  
     if (role.toUpperCase() === 'DOCTOR') {
       if (!doctorType || !specialty || !medicalLicenseNumber) {
         throw new Error('doctorType, specialty, and medicalLicenseNumber are required for Doctor.');
@@ -72,99 +56,55 @@ const registerHandler = async (req, res) => {
       const specialtyData = await Specialty.findOne({
         name: new RegExp(`^${specialty.trim()}$`, 'i'),
       });
-      if (!specialtyData) {
-        throw new Error(`Specialty '${specialty}' not found.`);
-      }
-        const departmentData = await Department.findById(department);
-  if (!departmentData) {
-    throw new Error(`Department not found.`);
-  }
+      if (!specialtyData) throw new Error(`Specialty '${specialty}' not found.`);
 
-      // if (!Array.isArray(schedule) || schedule.length === 0) {
-      //   throw new Error('Schedule must be a non-empty array.');
-      // }
+      const departmentData = await Department.findById(department);
+      if (!departmentData) throw new Error('Department not found.');
 
-      // const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-      // for (const entry of schedule) {
-      //   const { dayOfWeek, startTime, endTime, isAvailable } = entry;
-      //   if (!validDays.includes(dayOfWeek) || !startTime || !endTime || typeof isAvailable !== 'boolean') {
-      //     throw new Error('Invalid schedule entry.');
-      //   }
-      // }
+      const fullWeekSchedule = [
+        'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+      ].map(day => ({
+        dayOfWeek: day,
+        startTime: '00:00',
+        endTime: '23:59',
+        isAvailable: true,
+      }));
 
-   
-      const existingDoctor = await Doctor.findOne({ userId: newUser._id });
-      if (existingDoctor) {
-        throw new Error('Doctor already exists for this user.');
-      }
-      const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-  const fullWeekSchedule = allDays.map(day => ({
-    dayOfWeek: day,
-    startTime: '00:00',
-    endTime: '23:59',
-    isAvailable: true
-  }));
+      const doctor = await Doctor.create({
+        userId: newUser._id,
+        doctorType,
+        specialty: specialtyData._id,
+        department: departmentData._id,
+        medicalLicenseNumber,
+        schedule: fullWeekSchedule,
+      });
 
-
-const [doctor] = await Doctor.create(
-  [
-    {
-      userId: newUser._id,
-      doctorType,
-      specialty: specialtyData._id,
-      department: departmentData._id,
-      medicalLicenseNumber,
-      schedule: fullWeekSchedule,
-    },
-  ],
-  { session }
-);
-
-
-
-
-      await session.commitTransaction();
       return res.status(201).json({
-        message: 'Doctor registered successfully with schedule.',
+        message: 'Doctor registered successfully.',
         userId: newUser._id,
         doctorId: doctor._id,
       });
     }
 
-   
+    // --- Staff Registration ---
     if (!contactNumber || !designation) {
       throw new Error('contactNumber and designation are required for Staff.');
     }
 
- 
     let departmentId = null;
     if (department) {
       const departmentData = await Department.findOne({ name: department.trim() });
-      if (!departmentData) {
-        throw new Error(`Department '${department}' not found.`);
-      }
+      if (!departmentData) throw new Error(`Department '${department}' not found.`);
       departmentId = departmentData._id;
     }
 
- 
-    const existingStaff = await Staff.findOne({ userId: newUser._id });
-    if (existingStaff) {
-      throw new Error('Staff already exists for this user.');
-    }
+    const staff = await Staff.create({
+      userId: newUser._id,
+      contactNumber,
+      designation,
+      department: departmentId,
+    });
 
-     const staff = await Staff.create(
-        [
-          {
-            userId: newUser._id,
-            contactNumber,
-            designation,
-            department: departmentId,
-          },
-        ],
-        { session }
-      );
-
-    await session.commitTransaction();
     return res.status(201).json({
       message: 'Staff registered successfully.',
       userId: newUser._id,
@@ -172,12 +112,10 @@ const [doctor] = await Doctor.create(
     });
   } catch (error) {
     console.error('Registration error:', error.message);
-    await session.abortTransaction();
-    return res.status(400).json({ message: error.message });
-  } finally {
-    session.endSession();
+    res.status(400).json({ message: error.message });
   }
 };
+
 
 // const registerHandler = async (req, res) => {
 //   try {

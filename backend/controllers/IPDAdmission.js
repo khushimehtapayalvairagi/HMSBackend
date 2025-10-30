@@ -31,9 +31,7 @@ exports.createIPDAdmission = async (req, res) => {
 
         const [patient,doctor, ward] = await Promise.all([
             Patient.findById(patientId),
-         Doctor.findById(userDoctorId),
-
-
+            Doctor.findOne({_id:userDoctorId }),
             Ward.findById(wardId)
         ]);
 

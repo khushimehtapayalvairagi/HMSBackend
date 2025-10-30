@@ -502,13 +502,13 @@ exports.bulkUploadDepartment = async (req, res) => {
   }
 };
 
-// ----------- BULK UPLOAD DOCTORS -----------
 exports.bulkUploadDoctors = async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
   try {
     const data = await parseFile(req.file.path);
     fs.unlinkSync(req.file.path);
+
     if (!data.length) throw new Error("File is empty");
 
     const errors = [];
@@ -516,78 +516,83 @@ exports.bulkUploadDoctors = async (req, res) => {
 
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
-      const rowNum = i + 2; // Excel-like row numbers
+      const rowNum = i + 2;
 
-      let { name, email, password, doctorType, specialty, department, medicalLicenseNumber } = row;
+      const session = await mongoose.startSession();
+      session.startTransaction();
 
-      // Normalize / trim input
-      name = String(name || "").trim();
-      email = String(email || "").trim();
-      password = String(password || "").trim();
-      doctorType = String(doctorType || "").trim();
-      specialty = String(specialty || "").trim();
-      department = String(department || "").trim();
-      medicalLicenseNumber = String(medicalLicenseNumber || "").trim();
+      try {
+        let { name, email, password, doctorType, specialty, department, medicalLicenseNumber } = row;
 
-      // Validation
-      if (!name || !email || !password || !doctorType || !specialty || !department || !medicalLicenseNumber) {
-        errors.push({ row: rowNum, error: "Missing required fields" });
-        continue;
+        // Trim and validate
+        name = String(name || "").trim();
+        email = String(email || "").trim();
+        password = String(password || "").trim();
+        doctorType = String(doctorType || "").trim();
+        specialty = String(specialty || "").trim();
+        department = String(department || "").trim();
+        medicalLicenseNumber = String(medicalLicenseNumber || "").trim();
+
+        if (!name || !email || !password || !doctorType || !specialty || !department || !medicalLicenseNumber) {
+          throw new Error("Missing required fields");
+        }
+
+        const existingUser = await User.findOne({ email }).session(session);
+        if (existingUser) throw new Error("Email already exists");
+
+        const specialtyData = await Specialty.findOne({ name: new RegExp(`^${specialty}$`, "i") }).session(session);
+        const departmentData = await Department.findOne({ name: new RegExp(`^${department}$`, "i") }).session(session);
+        if (!specialtyData || !departmentData) throw new Error("Invalid Specialty or Department");
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const newUser = await User.create([{
+          name,
+          email,
+          password: hashedPassword,
+          role: "DOCTOR",
+        }], { session });
+
+        const defaultSchedule = [
+          "Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"
+        ].map(day => ({
+          dayOfWeek: day,
+          startTime: "09:00",
+          endTime: "17:00",
+          isAvailable: true
+        }));
+
+        await Doctor.create([{
+          userId: newUser[0]._id,
+          doctorType,
+          specialty: specialtyData._id,
+          department: departmentData._id,
+          medicalLicenseNumber,
+          schedule: defaultSchedule,
+        }], { session });
+
+        await session.commitTransaction();
+        successCount++;
+
+      } catch (err) {
+        await session.abortTransaction();
+        errors.push({ row: rowNum, error: err.message });
+      } finally {
+        session.endSession();
       }
-
-      const existingUser = await User.findOne({ email });
-      if (existingUser) {
-        errors.push({ row: rowNum, error: "Email already exists" });
-        continue;
-      }
-
-      const specialtyData = await Specialty.findOne({ name: new RegExp(`^${specialty}$`, "i") });
-      const departmentData = await Department.findOne({ name: new RegExp(`^${department}$`, "i") });
-
-      if (!specialtyData || !departmentData) {
-        errors.push({ row: rowNum, error: "Invalid Specialty or Department" });
-        continue;
-      }
-
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      const newUser = await User.create({
-        name,
-        email,
-        password: hashedPassword,
-        role: "DOCTOR",
-      });
-
-      const defaultSchedule = [
-        "Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"
-      ].map(day => ({
-        dayOfWeek: day,
-        startTime: "09:00",
-        endTime: "17:00",
-        isAvailable: true
-      }));
-
-      await Doctor.create({
-        userId: newUser._id,
-        doctorType,
-        specialty: specialtyData._id,
-        department: departmentData._id,
-        medicalLicenseNumber,
-        schedule: defaultSchedule,
-      });
-
-      successCount++;
     }
 
     if (errors.length)
       return res.status(400).json({ message: "Some rows failed", errorRows: errors, successCount });
 
     res.json({ message: "Doctors uploaded successfully", successCount });
+
   } catch (err) {
     if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     res.status(500).json({ message: "Upload failed", error: err.message });
   }
 };
+
 
 // ----------- BULK UPLOAD STAFF -----------
 exports.bulkUploadStaff = async (req, res) => {
