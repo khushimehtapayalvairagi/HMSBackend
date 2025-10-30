@@ -100,16 +100,23 @@ const getPatientByIdHandler = async (req, res) => {
 const getAvailableDoctorsHandler = async (req, res) => {
   try {
     const { specialtyName } = req.body;
+
+    if (!specialtyName) {
+      return res.status(400).json({ message: "specialtyName is required." });
+    }
+
     const specialty = await Specialty.findOne({ name: specialtyName.trim() });
-    if (!specialty) return res.status(404).json({ message: "Specialty not found" });
+    if (!specialty) {
+      return res.status(404).json({ message: `Specialty '${specialtyName}' not found.` });
+    }
 
     const doctors = await Doctor.find({ specialty: specialty._id })
-      .populate('userId', 'name email');
+      .populate("userId", "name email role");
 
-    res.status(200).json(doctors);
+    res.status(200).json({ doctors });
   } catch (err) {
     console.error("Error fetching doctors:", err);
-    res.status(500).json({ message: "Error fetching doctors" });
+    res.status(500).json({ message: "Error fetching available doctors." });
   }
 };
 
