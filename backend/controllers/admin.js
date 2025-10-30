@@ -70,20 +70,27 @@ const registerHandler = async (req, res) => {
         isAvailable: true,
       }));
 
-      const doctor = await Doctor.create({
-        userId: newUser._id,
-        doctorType,
-        specialty: specialtyData._id,
-        department: departmentData._id,
-        medicalLicenseNumber,
-        schedule: fullWeekSchedule,
-      });
+   const doctor = await Doctor.create({
+  userId: newUser._id,
+  doctorType,
+  specialty: specialtyData._id,
+  department: departmentData._id,
+  medicalLicenseNumber,
+  schedule: fullWeekSchedule,
+});
 
-      return res.status(201).json({
-        message: 'Doctor registered successfully.',
-        userId: newUser._id,
-        doctorId: doctor._id,
-      });
+// 🔍 Ensure the doctor document is actually saved and fetch it cleanly
+const savedDoctor = await Doctor.findById(doctor._id)
+  .populate('userId', 'name email role')
+  .populate('specialty', 'name')
+  .populate('department', 'name');
+
+// ✅ Return populated data safely
+return res.status(201).json({
+  message: 'Doctor registered successfully.',
+  doctor: savedDoctor,
+});
+
     }
 
     // --- Staff Registration ---
