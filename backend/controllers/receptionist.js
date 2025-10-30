@@ -134,9 +134,6 @@ const getAvailableDoctorsHandler = async (req, res) => {
   }
 };
 
-
-
-
 const createVisitHandler = async (req, res) => {
   try {
     const { patientId, patientDbId, visitType, assignedDoctorId, referredBy, payment } = req.body;
