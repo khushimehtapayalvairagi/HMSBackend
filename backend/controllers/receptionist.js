@@ -146,7 +146,15 @@ const createVisitHandler = async (req, res) => {
     });
 
     const receiptNumber = `${today}-${String(countToday + 1).padStart(3, '0')}`;
-const doctor = await Doctor.findById(assignedDoctorId).populate('userId', 'name');
+// const doctor = await Doctor.findById(assignedDoctorId).populate('userId', 'name');
+let doctor = await Doctor.findById(assignedDoctorId).populate('userId', 'name');
+if (!doctor) {
+  doctor = await Doctor.findOne({ userId: assignedDoctorId }).populate('userId', 'name');
+}
+if (!doctor) {
+  return res.status(404).json({ message: "Doctor not found" });
+}
+
     const visit = new Visit({
    patientId: patientId.trim(),
       patientDbId,
